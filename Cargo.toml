@@ -1,0 +1,56 @@
+[package]
+name = "doggygallery"
+version = "0.1.0"
+edition = "2021"
+authors = ["DoggyGallery Contributors"]
+description = "A secure media gallery server with HTTPS and authentication"
+license = "MIT"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["multipart"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "trace", "compression-full"] }
+
+# TLS
+rustls = "0.23"
+rustls-pemfile = "2.0"
+rcgen = "0.13"
+
+# Templates
+askama = "0.12"
+askama_axum = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# API Documentation
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "8", features = ["axum", "vendored"] }
+
+# CLI arguments
+clap = { version = "4", features = ["derive", "env"] }
+
+# Authentication
+base64 = "0.22"
+
+# Utilities
+mime_guess = "2.0"
+percent-encoding = "2.3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
