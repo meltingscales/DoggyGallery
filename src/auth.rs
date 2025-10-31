@@ -22,6 +22,14 @@ pub async fn basic_auth_middleware(
     request: Request,
     next: Next,
 ) -> Response {
+    // Extract client IP for logging
+    let client_ip = request
+        .headers()
+        .get("x-forwarded-for")
+        .or_else(|| request.headers().get("x-real-ip"))
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown");
+
     // Extract Authorization header
     let auth_header = request
         .headers()
@@ -40,7 +48,18 @@ pub async fn basic_auth_middleware(
                         let password_match = password.as_bytes().ct_eq(auth_config.password.as_bytes());
 
                         if bool::from(username_match & password_match) {
+                            tracing::debug!(
+                                client_ip = %client_ip,
+                                username = %username,
+                                "Authentication successful"
+                            );
                             return next.run(request).await;
+                        } else {
+                            tracing::warn!(
+                                client_ip = %client_ip,
+                                username = %username,
+                                "Authentication failed - invalid credentials"
+                            );
                         }
                     }
                 }
@@ -49,6 +68,11 @@ pub async fn basic_auth_middleware(
     }
 
     // Authentication failed - return 401 with WWW-Authenticate header
+    tracing::warn!(
+        client_ip = %client_ip,
+        "Authentication failed - no valid credentials provided"
+    );
+
     Response::builder()
         .status(StatusCode::UNAUTHORIZED)
         .header(

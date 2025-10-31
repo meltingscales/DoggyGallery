@@ -15,8 +15,8 @@ test:
 
 # Check code without building
 check:
-    cargo check
-    cargo clippy -- -D warnings
+    cargo check --all-targets
+    cargo clippy --all-targets -- -D warnings
 
 # Format code
 fmt:

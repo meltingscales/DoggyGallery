@@ -5,6 +5,7 @@ use axum::{
     http::{header, StatusCode},
     response::{Html, IntoResponse, Response},
 };
+use axum::http::header::CONTENT_SECURITY_POLICY;
 use percent_encoding::percent_decode_str;
 use std::path::PathBuf;
 use tokio::fs;
@@ -170,13 +171,27 @@ pub async fn serve_media_handler(
         .first_or_octet_stream()
         .to_string();
 
-    // Return the file with appropriate headers
-    Ok(Response::builder()
+    // Special handling for SVG files to prevent XSS
+    // SVG files can contain JavaScript, so we sandbox them
+    let mut response_builder = Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, mime_type)
-        .header(header::CACHE_CONTROL, "public, max-age=3600")
-        .body(Body::from(contents))
-        .unwrap())
+        .header(header::CACHE_CONTROL, "public, max-age=3600");
+
+    if file_name.to_lowercase().ends_with(".svg") {
+        // Serve SVG with restrictive CSP to prevent script execution
+        response_builder = response_builder
+            .header(header::CONTENT_TYPE, "image/svg+xml")
+            .header(
+                CONTENT_SECURITY_POLICY,
+                "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            );
+        tracing::debug!("Serving SVG file with sandboxed CSP: {}", file_name);
+    } else {
+        response_builder = response_builder.header(header::CONTENT_TYPE, mime_type);
+    }
+
+    // Return the file with appropriate headers
+    Ok(response_builder.body(Body::from(contents)).unwrap())
 }
 
 fn is_image(filename: &str) -> bool {

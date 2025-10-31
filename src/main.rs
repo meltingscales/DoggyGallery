@@ -4,6 +4,9 @@ use axum::{
     Router,
 };
 use clap::Parser;
+use std::sync::Arc;
+use tower::ServiceBuilder;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -59,18 +62,33 @@ async fn main() -> anyhow::Result<()> {
         password: config.password.clone(),
     };
 
+    // Configure rate limiting: 5 requests per second, burst of 10
+    let governor_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(5)
+            .burst_size(10)
+            .finish()
+            .expect("Failed to create rate limiter config"),
+    );
+
     // Build the application router
     let app = Router::new()
         .route("/", get(handlers::index_handler))
         .route("/browse/*path", get(handlers::list_directory_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
-        .layer(middleware::from_fn(security_headers::add_security_headers))
-        .layer(middleware::from_fn_with_state(
-            auth_config,
-            basic_auth_middleware,
-        ))
-        .layer(CompressionLayer::new())
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            ServiceBuilder::new()
+                .layer(middleware::from_fn(security_headers::add_security_headers))
+                .layer(GovernorLayer {
+                    config: governor_conf,
+                })
+                .layer(middleware::from_fn_with_state(
+                    auth_config,
+                    basic_auth_middleware,
+                ))
+                .layer(CompressionLayer::new())
+                .layer(TraceLayer::new_for_http()),
+        )
         .with_state(app_state);
 
     // Load or generate TLS configuration
