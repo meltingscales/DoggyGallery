@@ -9,11 +9,15 @@ use base64::Engine;
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+use crate::rate_limiter::AuthRateLimiter;
+
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct AuthConfig {
     #[zeroize(skip)]
     pub username: String,
     pub password: String,
+    #[zeroize(skip)]
+    pub rate_limiter: AuthRateLimiter,
 }
 
 /// Middleware for HTTP Basic Authentication
@@ -22,13 +26,31 @@ pub async fn basic_auth_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    // Extract client IP for logging
+    // Extract client IP for logging and rate limiting
     let client_ip = request
         .headers()
         .get("x-forwarded-for")
         .or_else(|| request.headers().get("x-real-ip"))
         .and_then(|h| h.to_str().ok())
         .unwrap_or("unknown");
+
+    // Check rate limit for this IP
+    if auth_config.rate_limiter.is_rate_limited(client_ip).await {
+        tracing::warn!(
+            client_ip = %client_ip,
+            "Authentication rate limited - too many failed attempts"
+        );
+
+        return Response::builder()
+            .status(StatusCode::TOO_MANY_REQUESTS)
+            .header(
+                header::WWW_AUTHENTICATE,
+                "Basic realm=\"DoggyGallery\", charset=\"UTF-8\"",
+            )
+            .header(header::RETRY_AFTER, "60")
+            .body(Body::from("Too many failed authentication attempts. Try again later."))
+            .unwrap();
+    }
 
     // Extract Authorization header
     let auth_header = request
@@ -48,6 +70,9 @@ pub async fn basic_auth_middleware(
                         let password_match = password.as_bytes().ct_eq(auth_config.password.as_bytes());
 
                         if bool::from(username_match & password_match) {
+                            // Clear rate limit on successful authentication
+                            auth_config.rate_limiter.clear(client_ip).await;
+
                             tracing::debug!(
                                 client_ip = %client_ip,
                                 username = %username,
@@ -55,6 +80,9 @@ pub async fn basic_auth_middleware(
                             );
                             return next.run(request).await;
                         } else {
+                            // Record failed attempt
+                            auth_config.rate_limiter.record_failure(client_ip).await;
+
                             tracing::warn!(
                                 client_ip = %client_ip,
                                 username = %username,
@@ -67,7 +95,9 @@ pub async fn basic_auth_middleware(
         }
     }
 
-    // Authentication failed - return 401 with WWW-Authenticate header
+    // Authentication failed - record and return 401 with WWW-Authenticate header
+    auth_config.rate_limiter.record_failure(client_ip).await;
+
     tracing::warn!(
         client_ip = %client_ip,
         "Authentication failed - no valid credentials provided"

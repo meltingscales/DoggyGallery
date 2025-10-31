@@ -5,20 +5,19 @@ use axum::{
 };
 use clap::Parser;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::time::Duration;
 use tower::ServiceBuilder;
-use tower_governor::{
-    governor::GovernorConfigBuilder,
-    GovernorLayer,
-};
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+use rate_limiter::AuthRateLimiter;
 
 mod auth;
 mod config;
 mod constants;
 mod handlers;
 mod models;
+mod rate_limiter;
 mod security_headers;
 mod templates;
 mod tls;
@@ -60,21 +59,25 @@ async fn main() -> anyhow::Result<()> {
         media_dir: config.media_dir.clone().canonicalize()?,
     };
 
+    // Create rate limiter for failed auth attempts
+    // Allow 10 failed attempts within a 60-second window
+    let rate_limiter = AuthRateLimiter::new(10, Duration::from_secs(60));
+
+    // Start cleanup task to remove old rate limit entries
+    let cleanup_limiter = rate_limiter.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(300)); // Cleanup every 5 minutes
+        loop {
+            interval.tick().await;
+            cleanup_limiter.cleanup().await;
+        }
+    });
+
     // Create authentication config
     let auth_config = AuthConfig {
         username: config.username.clone(),
         password: config.password.clone(),
-    };
-
-    // Configure rate limiting: 5 requests per second, burst of 10
-    let governor_conf = GovernorConfigBuilder::default()
-        .per_second(5)
-        .burst_size(10)
-        .finish()
-        .ok_or_else(|| anyhow::anyhow!("Failed to build rate limit config"))?;
-
-    let rate_limit_layer = GovernorLayer {
-        config: Arc::new(governor_conf),
+        rate_limiter,
     };
 
     // Build the application router
@@ -85,7 +88,6 @@ async fn main() -> anyhow::Result<()> {
         .layer(
             ServiceBuilder::new()
                 .layer(middleware::from_fn(security_headers::add_security_headers))
-                .layer(rate_limit_layer)
                 .layer(middleware::from_fn_with_state(
                     auth_config,
                     basic_auth_middleware,
