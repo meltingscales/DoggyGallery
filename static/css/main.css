@@ -1,5 +1,10 @@
 /* DoggyGallery - Main Styles with Dark/Light Mode Support */
 
+/* Support both light and dark color schemes */
+:root {
+    color-scheme: light dark;
+}
+
 /* CSS Variables for Light/Dark Mode */
 :root {
     --bg-gradient-start: #667eea;
