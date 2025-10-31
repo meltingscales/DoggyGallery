@@ -12,6 +12,7 @@ mod config;
 mod constants;
 mod handlers;
 mod models;
+mod security_headers;
 mod templates;
 mod tls;
 
@@ -63,6 +64,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(handlers::index_handler))
         .route("/browse/*path", get(handlers::list_directory_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
+        .layer(middleware::from_fn(security_headers::add_security_headers))
         .layer(middleware::from_fn_with_state(
             auth_config,
             basic_auth_middleware,

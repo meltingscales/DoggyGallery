@@ -6,9 +6,12 @@ use axum::{
     response::Response,
 };
 use base64::Engine;
+use subtle::ConstantTimeEq;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Clone)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct AuthConfig {
+    #[zeroize(skip)]
     pub username: String,
     pub password: String,
 }
@@ -32,8 +35,11 @@ pub async fn basic_auth_middleware(
                 if let Ok(credentials_str) = String::from_utf8(decoded) {
                     // Parse username:password
                     if let Some((username, password)) = credentials_str.split_once(':') {
-                        // Compare credentials (constant-time comparison would be better for production)
-                        if username == auth_config.username && password == auth_config.password {
+                        // Use constant-time comparison to prevent timing attacks
+                        let username_match = username.as_bytes().ct_eq(auth_config.username.as_bytes());
+                        let password_match = password.as_bytes().ct_eq(auth_config.password.as_bytes());
+
+                        if bool::from(username_match & password_match) {
                             return next.run(request).await;
                         }
                     }
