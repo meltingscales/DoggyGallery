@@ -34,13 +34,16 @@ pub async fn load_tls_config(cert_path: &Path, key_path: &Path) -> Result<Rustls
         .context("Failed to parse private key file")?
         .context("No private key found in key file")?;
 
-    // Build ServerConfig with TLS 1.3 ONLY
-    let server_config = rustls::ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
+    // Build ServerConfig with TLS 1.3 ONLY and HTTP/2 ONLY
+    let mut server_config = rustls::ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .context("Failed to create TLS configuration")?;
 
-    tracing::info!("TLS configuration loaded successfully (enforcing TLS 1.3 ONLY)");
+    // Configure ALPN to only support HTTP/2 (no HTTP/1.1 fallback)
+    server_config.alpn_protocols = vec![b"h2".to_vec()];
+
+    tracing::info!("TLS configuration loaded successfully (TLS 1.3 + HTTP/2 ONLY)");
 
     // Convert to RustlsConfig
     Ok(RustlsConfig::from_config(Arc::new(server_config)))
@@ -66,13 +69,16 @@ pub async fn generate_self_signed_config() -> Result<RustlsConfig> {
     let key = PrivateKeyDer::try_from(key_der)
         .map_err(|e| anyhow::anyhow!("Failed to parse generated private key: {}", e))?;
 
-    // Build ServerConfig with TLS 1.3 ONLY
-    let server_config = rustls::ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
+    // Build ServerConfig with TLS 1.3 ONLY and HTTP/2 ONLY
+    let mut server_config = rustls::ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .context("Failed to create TLS configuration with generated certificate")?;
 
-    tracing::info!("Self-signed certificate generated successfully (TLS 1.3 ONLY)");
+    // Configure ALPN to only support HTTP/2 (no HTTP/1.1 fallback)
+    server_config.alpn_protocols = vec![b"h2".to_vec()];
+
+    tracing::info!("Self-signed certificate generated successfully (TLS 1.3 + HTTP/2 ONLY)");
     tracing::warn!("Using self-signed certificate - this is NOT suitable for production!");
 
     Ok(RustlsConfig::from_config(Arc::new(server_config)))

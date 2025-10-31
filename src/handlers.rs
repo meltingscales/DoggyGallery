@@ -77,6 +77,8 @@ pub async fn list_directory_handler(
             EntryType::Image
         } else if is_video(&file_name) {
             EntryType::Video
+        } else if is_audio(&file_name) {
+            EntryType::Audio
         } else {
             continue; // Skip non-media files
         };
@@ -156,12 +158,12 @@ pub async fn serve_media_handler(
         return Err(AppError::NotFound);
     }
 
-    // Only serve image and video files
+    // Only serve image, video, and audio files
     let file_name = canonical_path.file_name()
         .and_then(|n| n.to_str())
         .ok_or(AppError::InvalidPath)?;
 
-    if !is_image(file_name) && !is_video(file_name) {
+    if !is_image(file_name) && !is_video(file_name) && !is_audio(file_name) {
         return Err(AppError::Forbidden);
     }
 
@@ -170,7 +172,48 @@ pub async fn serve_media_handler(
         .await
         .map_err(|_| AppError::InternalError)?;
 
-    // Determine MIME type
+    // Validate MIME type from file contents (magic bytes)
+    // This prevents serving malicious files with fake extensions
+    let detected_type = infer::get(&contents);
+
+    if let Some(file_type) = detected_type {
+        let mime = file_type.mime_type();
+
+        // Validate the detected MIME type matches the expected category
+        let is_valid = if is_image(file_name) {
+            mime.starts_with("image/")
+        } else if is_video(file_name) {
+            mime.starts_with("video/")
+        } else if is_audio(file_name) {
+            mime.starts_with("audio/")
+        } else {
+            false
+        };
+
+        if !is_valid {
+            tracing::warn!(
+                file = %file_name,
+                detected_mime = %mime,
+                "MIME type validation failed - file extension doesn't match content"
+            );
+            return Err(AppError::Forbidden);
+        }
+
+        tracing::debug!(
+            file = %file_name,
+            detected_mime = %mime,
+            "MIME type validation passed"
+        );
+    } else {
+        // If we can't detect the type, reject for safety
+        tracing::warn!(
+            file = %file_name,
+            "Could not detect MIME type from file contents"
+        );
+        return Err(AppError::Forbidden);
+    }
+
+    // Determine MIME type for response
     let mime_type = mime_guess::from_path(&canonical_path)
         .first_or_octet_stream()
         .to_string();
@@ -200,24 +243,17 @@ pub async fn serve_media_handler(
 
 fn is_image(filename: &str) -> bool {
     let lower = filename.to_lowercase();
-    lower.ends_with(".jpg")
-        || lower.ends_with(".jpeg")
-        || lower.ends_with(".png")
-        || lower.ends_with(".gif")
-        || lower.ends_with(".webp")
-        || lower.ends_with(".bmp")
-        || lower.ends_with(".svg")
+    constants::IMAGE_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
 }
 
 fn is_video(filename: &str) -> bool {
     let lower = filename.to_lowercase();
-    lower.ends_with(".mp4")
-        || lower.ends_with(".webm")
-        || lower.ends_with(".mkv")
-        || lower.ends_with(".avi")
-        || lower.ends_with(".mov")
-        || lower.ends_with(".flv")
-        || lower.ends_with(".wmv")
+    constants::VIDEO_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
+}
+
+fn is_audio(filename: &str) -> bool {
+    let lower = filename.to_lowercase();
+    constants::AUDIO_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
 }
 
 /// Application error types

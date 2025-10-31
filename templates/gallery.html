@@ -179,6 +179,21 @@
             background: #f59e0b;
         }
 
+        .item-type.audio {
+            background: #8b5cf6;
+        }
+
+        .audio-icon {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            color: white;
+        }
+
         .empty {
             background: white;
             border-radius: 12px;
@@ -364,6 +379,15 @@
                                 <span class="item-type video">Video</span>
                             </div>
                         </div>
+                    {% else if entry.is_audio() %}
+                        <div class="gallery-item" onclick="openLightbox('/media/{{ entry.path }}', 'audio')">
+                            <div class="audio-icon">🎵</div>
+                            <div class="item-info">
+                                <div class="item-name">{{ entry.name }}</div>
+                                <div class="item-size">{{ entry.formatted_size() }}</div>
+                                <span class="item-type audio">Audio</span>
+                            </div>
+                        </div>
                     {% endif %}
                 {% endfor %}
             </div>
@@ -450,6 +474,16 @@
                 source.src = item.src;
                 video.appendChild(source);
                 content.appendChild(video);
+            } else if (item.type === 'audio') {
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.autoplay = true;
+                audio.style.width = '100%';
+                audio.style.maxWidth = '600px';
+                const source = document.createElement('source');
+                source.src = item.src;
+                audio.appendChild(source);
+                content.appendChild(audio);
             }
         }
 

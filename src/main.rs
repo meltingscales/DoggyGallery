@@ -48,10 +48,11 @@ async fn main() -> anyhow::Result<()> {
     );
     tracing::info!("Media directory: {:?}", config.media_dir);
     tracing::info!(
-        "Listening on: https://{}:{} ({})",
+        "Listening on: https://{}:{} ({} + {})",
         config.host,
         config.port,
-        constants::TLS_VERSION
+        constants::TLS_VERSION,
+        constants::HTTP_VERSION
     );
 
     // Create application state

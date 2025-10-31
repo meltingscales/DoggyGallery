@@ -7,3 +7,21 @@ pub const APP_NAME: &str = "DoggyGallery";
 
 /// TLS version enforced
 pub const TLS_VERSION: &str = "TLS 1.3";
+
+/// HTTP protocol enforced
+pub const HTTP_VERSION: &str = "HTTP/2";
+
+/// Supported image file extensions
+pub const IMAGE_EXTENSIONS: &[&str] = &[
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"
+];
+
+/// Supported video file extensions
+pub const VIDEO_EXTENSIONS: &[&str] = &[
+    ".mp4", ".webm", ".mkv", ".avi", ".mov", ".flv", ".wmv"
+];
+
+/// Supported audio file extensions
+pub const AUDIO_EXTENSIONS: &[&str] = &[
+    ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".opus", ".weba"
+];
