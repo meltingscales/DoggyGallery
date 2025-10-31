@@ -4,9 +4,13 @@ use axum::{
     Router,
 };
 use clap::Parser;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tower::ServiceBuilder;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{
+    governor::GovernorConfigBuilder,
+    GovernorLayer,
+};
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -63,13 +67,15 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Configure rate limiting: 5 requests per second, burst of 10
-    let governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(5)
-            .burst_size(10)
-            .finish()
-            .expect("Failed to create rate limiter config"),
-    );
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(5)
+        .burst_size(10)
+        .finish()
+        .ok_or_else(|| anyhow::anyhow!("Failed to build rate limit config"))?;
+
+    let rate_limit_layer = GovernorLayer {
+        config: Arc::new(governor_conf),
+    };
 
     // Build the application router
     let app = Router::new()
@@ -79,9 +85,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(
             ServiceBuilder::new()
                 .layer(middleware::from_fn(security_headers::add_security_headers))
-                .layer(GovernorLayer {
-                    config: governor_conf,
-                })
+                .layer(rate_limit_layer)
                 .layer(middleware::from_fn_with_state(
                     auth_config,
                     basic_auth_middleware,
@@ -108,8 +112,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Server ready! Accepting connections...");
 
     // Start the HTTPS server with TLS 1.3
+    // Use into_make_service_with_connect_info to provide SocketAddr for rate limiting
     axum_server::bind_rustls(addr, tls_config)
-        .serve(app.into_make_service())
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await?;
 
     Ok(())
