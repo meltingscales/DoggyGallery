@@ -1,12 +1,13 @@
 use askama::Template;
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, StatusCode},
-    response::{Html, IntoResponse, Response},
+    response::{Html, IntoResponse, Response, Json},
 };
 use axum::http::header::CONTENT_SECURITY_POLICY;
 use percent_encoding::percent_decode_str;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -254,6 +255,158 @@ fn is_video(filename: &str) -> bool {
 fn is_audio(filename: &str) -> bool {
     let lower = filename.to_lowercase();
     constants::AUDIO_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
+}
+
+/// Filter query parameters
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct FilterQuery {
+    /// Filter by file type (image, video, or audio)
+    #[serde(rename = "type")]
+    file_type: Option<String>,
+    /// Filter by file extension (e.g., .jpg, .mp4)
+    extension: Option<String>,
+    /// Fuzzy match on file name
+    name: Option<String>,
+}
+
+/// Filter response
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct FilterResponse {
+    /// List of matching files
+    results: Vec<FilterResult>,
+    /// Total number of results
+    total: usize,
+}
+
+/// Individual filter result
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct FilterResult {
+    /// Relative path to the file
+    path: String,
+    /// File name
+    name: String,
+    /// File size in bytes
+    size: u64,
+    /// File type (image, video, or audio)
+    file_type: String,
+}
+
+/// Search and filter media files
+#[utoipa::path(
+    get,
+    path = "/api/filter",
+    params(FilterQuery),
+    responses(
+        (status = 200, description = "List of matching files", body = FilterResponse)
+    ),
+    tag = "media"
+)]
+pub async fn filter_handler(
+    State(state): State<AppState>,
+    Query(query): Query<FilterQuery>,
+) -> Result<Json<FilterResponse>, AppError> {
+    let mut results = Vec::new();
+
+    // Recursively search all files
+    search_directory(&state.media_dir, "", &query, &mut results).await?;
+
+    // Sort by name
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+
+    let total = results.len();
+
+    Ok(Json(FilterResponse { results, total }))
+}
+
+/// Recursively search directory for matching files
+async fn search_directory(
+    base_path: &PathBuf,
+    relative_path: &str,
+    query: &FilterQuery,
+    results: &mut Vec<FilterResult>,
+) -> Result<(), AppError> {
+    let current_path = if relative_path.is_empty() {
+        base_path.clone()
+    } else {
+        base_path.join(relative_path)
+    };
+
+    let mut read_dir = fs::read_dir(&current_path)
+        .await
+        .map_err(|_| AppError::InternalError)?;
+
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .map_err(|_| AppError::InternalError)?
+    {
+        let metadata = entry.metadata().await.map_err(|_| AppError::InternalError)?;
+        let file_name = entry.file_name().to_string_lossy().to_string();
+
+        // Skip hidden files
+        if file_name.starts_with('.') {
+            continue;
+        }
+
+        let entry_relative_path = if relative_path.is_empty() {
+            file_name.clone()
+        } else {
+            format!("{}/{}", relative_path, file_name)
+        };
+
+        if metadata.is_dir() {
+            // Recurse into subdirectory
+            Box::pin(search_directory(
+                base_path,
+                &entry_relative_path,
+                query,
+                results,
+            ))
+            .await?;
+        } else {
+            // Check if file matches filters
+            let file_type = if is_image(&file_name) {
+                "image"
+            } else if is_video(&file_name) {
+                "video"
+            } else if is_audio(&file_name) {
+                "audio"
+            } else {
+                continue; // Skip non-media files
+            };
+
+            // Apply filters
+            if let Some(ref type_filter) = query.file_type {
+                if file_type != type_filter {
+                    continue;
+                }
+            }
+
+            if let Some(ref ext_filter) = query.extension {
+                let file_ext = file_name.to_lowercase();
+                if !file_ext.ends_with(&ext_filter.to_lowercase()) {
+                    continue;
+                }
+            }
+
+            if let Some(ref name_filter) = query.name {
+                // Fuzzy matching: check if filter is contained in filename (case insensitive)
+                if !file_name.to_lowercase().contains(&name_filter.to_lowercase()) {
+                    continue;
+                }
+            }
+
+            results.push(FilterResult {
+                path: entry_relative_path.clone(),
+                name: file_name.clone(),
+                size: metadata.len(),
+                file_type: file_type.to_string(),
+            });
+        }
+    }
+
+    Ok(())
 }
 
 /// Application error types

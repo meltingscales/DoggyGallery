@@ -11,7 +11,10 @@ use tower_http::{compression::CompressionLayer, services::ServeDir, trace::Trace
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use rate_limiter::AuthRateLimiter;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
+mod api;
 mod auth;
 mod config;
 mod constants;
@@ -25,6 +28,32 @@ mod tls;
 use auth::{basic_auth_middleware, AuthConfig};
 use config::Config;
 use handlers::AppState;
+
+/// OpenAPI documentation
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        handlers::filter_handler,
+        api::config_handler,
+    ),
+    components(
+        schemas(
+            handlers::FilterResponse,
+            handlers::FilterResult,
+            api::ConfigInfo,
+        )
+    ),
+    tags(
+        (name = "media", description = "Media file operations"),
+        (name = "info", description = "Server configuration and information")
+    ),
+    info(
+        title = "DoggyGallery API",
+        version = "0.1.0",
+        description = "A secure media gallery server with TLS 1.3 + HTTP/2",
+    )
+)]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -86,6 +115,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(handlers::index_handler))
         .route("/browse/*path", get(handlers::list_directory_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
+        .route("/api/filter", get(handlers::filter_handler))
+        .route("/api/config", get(api::config_handler))
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest_service("/static", ServeDir::new("static"))
         .layer(
             ServiceBuilder::new()
