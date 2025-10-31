@@ -10,6 +10,7 @@ use percent_encoding::percent_decode_str;
 use std::path::PathBuf;
 use tokio::fs;
 
+use crate::constants;
 use crate::models::{DirectoryEntry, DirectoryListing, EntryType};
 use crate::templates::GalleryTemplate;
 
@@ -120,7 +121,10 @@ pub async fn list_directory_handler(
         entries,
     };
 
-    let template = GalleryTemplate { listing };
+    let template = GalleryTemplate {
+        listing,
+        emoji_prefix: constants::EMOJI_PREFIX,
+    };
     Ok(Html(template.render().map_err(|_| AppError::InternalError)?))
 }
 

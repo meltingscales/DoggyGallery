@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FAQ - DoggyGallery</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding-bottom: 40px;
+            }
+
+            .content {
+                max-width: 900px;
+                margin: 40px auto;
+                background: white;
+                border-radius: 16px;
+                padding: 40px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+
+            h1 {
+                color: #333;
+                margin-bottom: 30px;
+            }
+
+            .back-link {
+                display: inline-block;
+                margin-bottom: 20px;
+                color: #667eea;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .back-link:hover {
+                text-decoration: underline;
+            }
+
+            .faq-section {
+                margin-bottom: 30px;
+            }
+
+            .faq-question {
+                font-weight: bold;
+                color: #667eea;
+                font-size: 1.2em;
+                margin-bottom: 10px;
+                margin-top: 25px;
+            }
+
+            .faq-answer {
+                color: #555;
+                line-height: 1.6;
+                margin-bottom: 15px;
+            }
+
+            code {
+                background: #f4f4f4;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: monospace;
+                color: #667eea;
+            }
+
+            .highlight-box {
+                background: #f0fdf4;
+                border-left: 4px solid #10b981;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 4px;
+            }
+
+            .warning-box {
+                background: #fef3c7;
+                border-left: 4px solid #f59e0b;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 4px;
+            }
+
+            .info-box {
+                background: #e0e7ff;
+                border-left: 4px solid #667eea;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 4px;
+            }
+
+            ul {
+                margin-left: 20px;
+                margin-bottom: 15px;
+            }
+
+            li {
+                margin-bottom: 8px;
+                color: #555;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <a href="/" class="back-link">← Back to Gallery</a>
+            <h1>🐕🖼️✨🔒 DoggyGallery FAQ</h1>
+
+            <div class="faq-section">
+                <div class="faq-question">
+                    What is DoggyGallery?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery is a secure, self-hosted media gallery server for serving
+                        images and videos over HTTPS. It's designed with security as the top
+                        priority, enforcing modern encryption standards and authentication.
+                    </p>
+                </div>
+
+                <div class="faq-question">
+                    🔒 How does authentication work?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery uses <strong>HTTP Basic Authentication</strong> over
+                        <strong>TLS 1.3</strong>. While HTTP Basic Auth sends credentials
+                        with each request, it is completely safe when used with TLS 1.3
+                        because:
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>All traffic is encrypted end-to-end</strong> -
+                            Your credentials are encrypted before leaving your device
+                        </li>
+                        <li>
+                            <strong>TLS 1.3 only</strong> - We enforce the latest TLS
+                            version with no fallback to older, vulnerable protocols
+                        </li>
+                        <li>
+                            <strong>Constant-time comparison</strong> - Credentials are
+                            validated using timing-attack resistant algorithms
+                        </li>
+                        <li>
+                            <strong>Credentials zeroized</strong> - Passwords are
+                            securely erased from memory after use
+                        </li>
+                    </ul>
+
+                    <div class="highlight-box">
+                        <strong>Why TLS 1.3 makes HTTP Basic Auth secure:</strong>
+                        <p style="margin-top: 10px;">
+                            TLS 1.3 provides forward secrecy, authenticated encryption, and
+                            eliminates all known vulnerabilities from older TLS versions.
+                            When credentials are sent over TLS 1.3, they're protected by
+                            AES-256-GCM or ChaCha20-Poly1305 encryption, making interception
+                            impossible without compromising the TLS connection itself.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-question">
+                    🛡️ What security features does DoggyGallery have?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery implements multiple layers of security protection:
+                    </p>
+
+                    <p style="margin-top: 15px">
+                        <strong>Transport Security:</strong>
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>TLS 1.3 enforcement</strong> - Only the latest
+                            TLS protocol is accepted (no TLS 1.2 or older)
+                        </li>
+                        <li>
+                            <strong>HSTS headers</strong> - Forces browsers to always
+                            use HTTPS
+                        </li>
+                        <li>
+                            <strong>Modern cipher suites</strong> - Uses only secure,
+                            forward-secret ciphers
+                        </li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>Authentication Security:</strong>
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>Rate limiting</strong> - Limits failed login attempts
+                            (10 attempts per 60 seconds per IP)
+                        </li>
+                        <li>
+                            <strong>Constant-time comparison</strong> - Prevents timing
+                            attacks during credential validation
+                        </li>
+                        <li>
+                            <strong>Memory protection</strong> - Passwords are zeroized
+                            from memory using the <code>zeroize</code> crate
+                        </li>
+                        <li>
+                            <strong>Failed attempt logging</strong> - All authentication
+                            failures are logged with client IPs
+                        </li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>Content Security:</strong>
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>Path traversal protection</strong> - Prevents access
+                            to files outside the media directory
+                        </li>
+                        <li>
+                            <strong>SVG XSS protection</strong> - SVG files are sandboxed
+                            with restrictive CSP headers
+                        </li>
+                        <li>
+                            <strong>Security headers</strong> - X-Frame-Options,
+                            X-Content-Type-Options, CSP, and more
+                        </li>
+                        <li>
+                            <strong>Media-only serving</strong> - Only image and video
+                            files can be accessed
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="faq-question">
+                    🚨 How does rate limiting work?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery implements smart rate limiting that only restricts
+                        <strong>failed authentication attempts</strong>:
+                    </p>
+                    <ul>
+                        <li>
+                            Failed logins are tracked per IP address
+                        </li>
+                        <li>
+                            After 10 failed attempts within 60 seconds, the IP is
+                            temporarily blocked
+                        </li>
+                        <li>
+                            Successful authentication <strong>immediately clears</strong>
+                            the rate limit for that IP
+                        </li>
+                        <li>
+                            Once authenticated, users can make <strong>unlimited requests</strong>
+                            - no browsing restrictions
+                        </li>
+                        <li>
+                            Old entries are cleaned up automatically every 5 minutes
+                        </li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>Design Philosophy:</strong> Rate limiting should protect
+                        against brute-force attacks without hindering legitimate users.
+                        Once you're authenticated, browse freely!
+                    </div>
+                </div>
+
+                <div class="faq-question">
+                    🔐 What about TLS certificates?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery supports two certificate modes:
+                    </p>
+
+                    <p style="margin-top: 15px">
+                        <strong>1. Self-signed certificates (development):</strong>
+                    </p>
+                    <ul>
+                        <li>
+                            Use <code>--self-signed-certs-on-the-fly</code> to generate
+                            certificates automatically
+                        </li>
+                        <li>
+                            Certificates are generated fresh on each startup using
+                            <code>rcgen</code>
+                        </li>
+                        <li>
+                            Great for local development and testing
+                        </li>
+                        <li>
+                            Browsers will show security warnings (expected behavior)
+                        </li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>2. Custom certificates (production):</strong>
+                    </p>
+                    <ul>
+                        <li>
+                            Use <code>--cert</code> and <code>--key</code> to provide
+                            your own certificate files
+                        </li>
+                        <li>
+                            Supports certificates from Let's Encrypt, commercial CAs,
+                            or your own CA
+                        </li>
+                        <li>
+                            Required for production deployments
+                        </li>
+                        <li>
+                            No browser warnings when using trusted certificates
+                        </li>
+                    </ul>
+
+                    <div class="warning-box">
+                        <strong>⚠️ Production Warning:</strong> Always use proper,
+                        CA-signed certificates in production. Self-signed certificates
+                        should only be used for development and testing.
+                    </div>
+                </div>
+
+                <div class="faq-question">
+                    📁 What file types are supported?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery displays images and videos in a beautiful,
+                        responsive grid:
+                    </p>
+
+                    <p style="margin-top: 15px">
+                        <strong>Images:</strong>
+                    </p>
+                    <ul>
+                        <li>JPEG (.jpg, .jpeg)</li>
+                        <li>PNG (.png)</li>
+                        <li>GIF (.gif)</li>
+                        <li>WebP (.webp)</li>
+                        <li>BMP (.bmp)</li>
+                        <li>SVG (.svg) - served with sandboxed CSP</li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>Videos:</strong>
+                    </p>
+                    <ul>
+                        <li>MP4 (.mp4)</li>
+                        <li>WebM (.webm)</li>
+                        <li>MKV (.mkv)</li>
+                        <li>AVI (.avi)</li>
+                        <li>MOV (.mov)</li>
+                        <li>FLV (.flv)</li>
+                        <li>WMV (.wmv)</li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        Files are displayed with thumbnails, and clicking opens them
+                        in a lightbox with navigation controls. All other file types
+                        are ignored for security.
+                    </p>
+                </div>
+
+                <div class="faq-question">
+                    📱 What are the navigation features?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery includes mobile-friendly navigation controls:
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>Keyboard shortcuts:</strong> Use arrow keys to
+                            navigate left/right, Escape to close
+                        </li>
+                        <li>
+                            <strong>Touch gestures:</strong> Swipe left/right on
+                            mobile devices to navigate between images
+                        </li>
+                        <li>
+                            <strong>Navigation buttons:</strong> On-screen Prev/Next
+                            buttons for easy navigation
+                        </li>
+                        <li>
+                            <strong>Random button:</strong> Jump to a random image
+                            in the current gallery
+                        </li>
+                        <li>
+                            <strong>Arrow buttons:</strong> Large arrow overlays on
+                            the sides of the lightbox
+                        </li>
+                    </ul>
+
+                    <div class="highlight-box">
+                        <strong>Mobile Optimized:</strong> All controls are sized
+                        appropriately for touch interaction, with large tap targets
+                        and smooth transitions.
+                    </div>
+                </div>
+
+                <div class="faq-question">
+                    🔍 What privacy measures are in place?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery respects your privacy:
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>No analytics</strong> - No tracking cookies, no
+                            third-party scripts
+                        </li>
+                        <li>
+                            <strong>Minimal logging</strong> - Only authentication
+                            attempts and errors are logged
+                        </li>
+                        <li>
+                            <strong>Self-hosted</strong> - Your media never leaves
+                            your server
+                        </li>
+                        <li>
+                            <strong>No external dependencies</strong> - All assets
+                            are served locally
+                        </li>
+                        <li>
+                            <strong>IP privacy</strong> - IP addresses are only used
+                            for rate limiting and not permanently stored
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="faq-question">
+                    🛠️ How do I self-host DoggyGallery?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        DoggyGallery is built with Rust and designed for easy deployment:
+                    </p>
+
+                    <p style="margin-top: 15px">
+                        <strong>Quick Start:</strong>
+                    </p>
+                    <pre style="
+                            background: #f4f4f4;
+                            padding: 15px;
+                            border-radius: 8px;
+                            overflow-x: auto;
+                        "><code># Build the project
+cargo build --release
+
+# Run with self-signed certs (development)
+./target/release/doggygallery \
+    --self-signed-certs-on-the-fly \
+    --media-dir /path/to/media \
+    --username admin \
+    --password "your-secure-password" \
+    --host 0.0.0.0 \
+    --port 8443
+
+# Run with custom certificates (production)
+./target/release/doggygallery \
+    --cert /path/to/cert.pem \
+    --key /path/to/key.pem \
+    --media-dir /path/to/media \
+    --username admin \
+    --password "your-secure-password"</code></pre>
+
+                    <p style="margin-top: 15px">
+                        All options can also be set via environment variables.
+                        See the README for full deployment instructions.
+                    </p>
+                </div>
+
+                <div class="faq-question">
+                    ⚠️ Security best practices
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        To maximize security when running DoggyGallery:
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>Use strong passwords</strong> - Long, random
+                            passwords for authentication
+                        </li>
+                        <li>
+                            <strong>Use proper certificates</strong> - Get free
+                            certificates from Let's Encrypt for production
+                        </li>
+                        <li>
+                            <strong>Keep it updated</strong> - Regularly update to
+                            get the latest security patches
+                        </li>
+                        <li>
+                            <strong>Restrict network access</strong> - Use firewall
+                            rules to limit who can reach the server
+                        </li>
+                        <li>
+                            <strong>Monitor logs</strong> - Watch for suspicious
+                            authentication patterns
+                        </li>
+                        <li>
+                            <strong>Run with minimal privileges</strong> - Don't run
+                            as root; use a dedicated service account
+                        </li>
+                        <li>
+                            <strong>Keep dependencies updated</strong> - Run
+                            <code>cargo audit</code> regularly
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="faq-question">
+                    📞 How do I report security issues?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        If you discover a security vulnerability in DoggyGallery:
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>DO NOT</strong> open a public GitHub issue
+                        </li>
+                        <li>
+                            Report privately through GitHub's security advisory system
+                        </li>
+                        <li>
+                            Or contact the maintainers directly via email
+                        </li>
+                    </ul>
+                    <p style="margin-top: 10px">
+                        Responsible disclosure helps keep all users secure.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

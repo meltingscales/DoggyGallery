@@ -7,7 +7,7 @@ use clap::Parser;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tower::ServiceBuilder;
-use tower_http::{compression::CompressionLayer, trace::TraceLayer};
+use tower_http::{compression::CompressionLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use rate_limiter::AuthRateLimiter;
@@ -85,6 +85,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(handlers::index_handler))
         .route("/browse/*path", get(handlers::list_directory_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
+        .nest_service("/static", ServeDir::new("static"))
         .layer(
             ServiceBuilder::new()
                 .layer(middleware::from_fn(security_headers::add_security_headers))

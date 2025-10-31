@@ -5,4 +5,5 @@ use crate::models::DirectoryListing;
 #[template(path = "gallery.html")]
 pub struct GalleryTemplate {
     pub listing: DirectoryListing,
+    pub emoji_prefix: &'static str,
 }

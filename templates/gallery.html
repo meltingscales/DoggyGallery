@@ -35,6 +35,25 @@
             color: #333;
             font-size: 28px;
             margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .faq-link {
+            font-size: 14px;
+            font-weight: normal;
+            color: #667eea;
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid #667eea;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .faq-link:hover {
+            background: #667eea;
+            color: white;
         }
 
         .breadcrumb {
@@ -208,6 +227,64 @@
             z-index: 1001;
         }
 
+        .lightbox-nav {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1001;
+        }
+
+        .lightbox-nav button {
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .lightbox-nav button:hover {
+            background: rgba(85, 104, 211, 0.9);
+        }
+
+        .lightbox-nav button:active {
+            transform: scale(0.95);
+        }
+
+        .lightbox-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(102, 126, 234, 0.7);
+            color: white;
+            border: none;
+            padding: 20px 15px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1001;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .lightbox-arrow:hover {
+            background: rgba(85, 104, 211, 0.9);
+        }
+
+        .lightbox-arrow.prev {
+            left: 20px;
+        }
+
+        .lightbox-arrow.next {
+            right: 20px;
+        }
+
         @media (max-width: 768px) {
             .gallery {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -217,13 +294,26 @@
             h1 {
                 font-size: 22px;
             }
+
+            .lightbox-nav button {
+                padding: 15px 25px;
+                font-size: 18px;
+            }
+
+            .lightbox-arrow {
+                padding: 25px 20px;
+                font-size: 28px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🐕 DoggyGallery</h1>
+            <h1>
+                <span>{{ emoji_prefix }} DoggyGallery</span>
+                <a href="/static/faq.html" class="faq-link">FAQ</a>
+            </h1>
             <div class="breadcrumb">
                 <a href="/">Home</a>
                 {% if listing.current_path != "" %}
@@ -282,31 +372,85 @@
 
     <div id="lightbox" class="lightbox" onclick="closeLightbox()">
         <span class="lightbox-close">&times;</span>
+        <button class="lightbox-arrow prev" onclick="event.stopPropagation(); prevMedia();">&#8249;</button>
+        <button class="lightbox-arrow next" onclick="event.stopPropagation(); nextMedia();">&#8250;</button>
         <div class="lightbox-content" id="lightbox-content"></div>
+        <div class="lightbox-nav">
+            <button onclick="event.stopPropagation(); prevMedia();">← Prev</button>
+            <button onclick="event.stopPropagation(); randomMedia();">🎲 Random</button>
+            <button onclick="event.stopPropagation(); nextMedia();">Next →</button>
+        </div>
     </div>
 
     <script>
-        function openLightbox(src, type) {
-            const lightbox = document.getElementById('lightbox');
-            const content = document.getElementById('lightbox-content');
+        // Build array of all media items (images and videos only)
+        let mediaItems = [];
+        let currentIndex = 0;
 
+        // Touch handling for swipe gestures
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        // Initialize media items array on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const galleryItems = document.querySelectorAll('.gallery-item[onclick]');
+            galleryItems.forEach(item => {
+                const onclick = item.getAttribute('onclick');
+                if (onclick) {
+                    // Extract src and type from onclick="openLightbox('/media/...', 'image')"
+                    const match = onclick.match(/openLightbox\('([^']+)',\s*'([^']+)'\)/);
+                    if (match) {
+                        mediaItems.push({
+                            src: match[1],
+                            type: match[2]
+                        });
+                    }
+                }
+            });
+
+            // Add keyboard event listener
+            document.addEventListener('keydown', handleKeyboard);
+
+            // Add touch event listeners for swipe
+            const lightboxContent = document.getElementById('lightbox-content');
+            lightboxContent.addEventListener('touchstart', handleTouchStart, false);
+            lightboxContent.addEventListener('touchend', handleTouchEnd, false);
+        });
+
+        function openLightbox(src, type) {
+            // Find the index of this media item
+            currentIndex = mediaItems.findIndex(item => item.src === src);
+            if (currentIndex === -1) currentIndex = 0;
+
+            displayMedia(currentIndex);
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function displayMedia(index) {
+            if (mediaItems.length === 0) return;
+
+            // Wrap around if out of bounds
+            if (index < 0) index = mediaItems.length - 1;
+            if (index >= mediaItems.length) index = 0;
+
+            currentIndex = index;
+            const item = mediaItems[currentIndex];
+            const content = document.getElementById('lightbox-content');
             content.innerHTML = '';
 
-            if (type === 'image') {
+            if (item.type === 'image') {
                 const img = document.createElement('img');
-                img.src = src;
+                img.src = item.src;
                 content.appendChild(img);
-            } else if (type === 'video') {
+            } else if (item.type === 'video') {
                 const video = document.createElement('video');
                 video.controls = true;
                 video.autoplay = true;
                 const source = document.createElement('source');
-                source.src = src;
+                source.src = item.src;
                 video.appendChild(source);
                 content.appendChild(video);
             }
-
-            lightbox.classList.add('active');
         }
 
         function closeLightbox() {
@@ -314,6 +458,65 @@
             const content = document.getElementById('lightbox-content');
             lightbox.classList.remove('active');
             content.innerHTML = '';
+        }
+
+        function nextMedia() {
+            displayMedia(currentIndex + 1);
+        }
+
+        function prevMedia() {
+            displayMedia(currentIndex - 1);
+        }
+
+        function randomMedia() {
+            if (mediaItems.length <= 1) return;
+
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * mediaItems.length);
+            } while (randomIndex === currentIndex);
+
+            displayMedia(randomIndex);
+        }
+
+        function handleKeyboard(e) {
+            const lightbox = document.getElementById('lightbox');
+            if (!lightbox.classList.contains('active')) return;
+
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextMedia();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevMedia();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeLightbox();
+            }
+        }
+
+        function handleTouchStart(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }
+
+        function handleTouchEnd(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }
+
+        function handleSwipe() {
+            const swipeThreshold = 50; // Minimum distance for a swipe
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    // Swiped left, show next
+                    nextMedia();
+                } else {
+                    // Swiped right, show previous
+                    prevMedia();
+                }
+            }
         }
 
         document.getElementById('lightbox-content').onclick = function(e) {
