@@ -26,13 +26,37 @@ A secure, fast, and beautiful media gallery server built with Rust. Serve your i
 
 ### Installation
 
+#### Option 1: Install from crates.io (easiest)
+
+```bash
+# Install directly from crates.io
+cargo install doggygallery
+
+# Run from anywhere
+doggygallery --help
+```
+
+#### Option 2: Install from GitHub
+
+```bash
+# Install directly from GitHub
+cargo install --git https://github.com/meltingscales/DoggyGallery
+
+# Run from anywhere
+doggygallery --help
+```
+
+#### Option 3: Build from source
+
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/meltingscales/DoggyGallery
 cd DoggyGallery
 
 # Build the project
 cargo build --release
+
+# Binary will be at: ./target/release/doggygallery
 
 # Or use just
 just build
