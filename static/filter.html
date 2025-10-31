@@ -166,10 +166,27 @@
                     item.className = 'result-item';
                     item.onclick = () => DoggyLightbox.open(`/media/${result.path}`, result.file_type);
 
+                    let thumbnailHtml = '';
+                    if (result.file_type === 'image') {
+                        thumbnailHtml = `<img src="/media/${result.path}" alt="${result.name}" class="thumbnail" loading="lazy">`;
+                    } else if (result.file_type === 'video') {
+                        thumbnailHtml = `
+                            <div class="video-thumbnail">
+                                <video class="thumbnail" preload="metadata">
+                                    <source src="/media/${result.path}#t=0.5">
+                                </video>
+                            </div>
+                        `;
+                    } else if (result.file_type === 'audio') {
+                        thumbnailHtml = `
+                            <div class="audio-icon">
+                                ${getFileIcon(result.file_type)}
+                            </div>
+                        `;
+                    }
+
                     item.innerHTML = `
-                        <div class="result-icon ${result.file_type}">
-                            ${getFileIcon(result.file_type)}
-                        </div>
+                        ${thumbnailHtml}
                         <div class="result-info">
                             <div class="result-name">${result.name}</div>
                             <div class="result-path">${result.path}</div>
