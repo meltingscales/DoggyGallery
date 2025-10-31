@@ -3,8 +3,14 @@ name = "doggygallery"
 version = "0.1.0"
 edition = "2021"
 authors = ["DoggyGallery Contributors"]
-description = "A secure media gallery server with HTTPS and authentication"
+description = "A secure, beautiful media gallery server with TLS 1.3, HTTP Basic Auth, and automatic light/dark mode"
 license = "MIT"
+repository = "https://github.com/meltingscales/DoggyGallery"
+homepage = "https://github.com/meltingscales/DoggyGallery"
+documentation = "https://docs.rs/doggygallery"
+readme = "README.md"
+keywords = ["media", "gallery", "server", "https", "tls"]
+categories = ["web-programming::http-server", "multimedia"]
 
 [dependencies]
 # Web framework

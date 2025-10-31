@@ -1,6 +1,14 @@
 # DoggyGallery 🐕
 
+[![Crates.io](https://img.shields.io/crates/v/doggygallery.svg)](https://crates.io/crates/doggygallery)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A secure, fast, and beautiful media gallery server built with Rust. Serve your images and videos over HTTPS with HTTP Basic Authentication.
+
+**Links:**
+- 📦 [crates.io Package](https://crates.io/crates/doggygallery)
+- 📚 [GitHub Repository](https://github.com/meltingscales/DoggyGallery)
+- 📖 [API Documentation](https://docs.rs/doggygallery)
 
 ## Features
 
