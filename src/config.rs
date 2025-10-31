@@ -33,8 +33,8 @@ pub struct Config {
     #[arg(long, default_value = "0.0.0.0", env = "DOGGYGALLERY_HOST")]
     pub host: String,
 
-    /// Port to listen on
-    #[arg(long, default_value = "8443", env = "DOGGYGALLERY_PORT")]
+    /// Port to listen on (default: 7833 - "RUFF" on phone keypad!)
+    #[arg(long, default_value = "7833", env = "DOGGYGALLERY_PORT")]
     pub port: u16,
 }
 

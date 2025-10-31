@@ -5,13 +5,16 @@ A secure, fast, and beautiful media gallery server built with Rust. Serve your i
 ## Features
 
 - **HTTPS Only**: Forces TLS 1.3 for secure connections
-- **Authentication**: HTTP Basic Authentication with configurable username/password
-- **Media Support**: Serves images (JPG, PNG, GIF, WebP, etc.) and videos (MP4, WebM, MKV, etc.)
-- **Beautiful UI**: Modern, responsive gallery interface with lightbox for viewing
-- **Directory Browsing**: Navigate through subdirectories
+- **Authentication**: HTTP Basic Authentication with rate limiting (10 attempts per minute)
+- **Media Support**: Serves images, videos, AND audio files (MP3, FLAC, WAV, etc.)
+- **Beautiful UI**: Modern, responsive gallery interface with lightbox viewer
+- **Dark Mode**: Automatic light/dark theme based on system preferences
+- **Filter & Search**: Advanced filtering by type, extension, and fuzzy name matching
+- **Directory Browsing**: Navigate through subdirectories seamlessly
+- **OpenAPI/Swagger**: Interactive API documentation at `/docs`
 - **Self-Signed Certs**: Optional on-the-fly certificate generation for development
 - **Compression**: Automatic gzip/brotli compression for faster loading
-- **Security**: Path traversal protection, hidden file filtering
+- **Security**: MIME validation, path traversal protection, security headers, SVG sandboxing
 
 ## Quick Start
 
@@ -50,7 +53,7 @@ just dev-custom /path/to/your/media
 This will:
 - Generate self-signed certificates in `certs/`
 - Create a `media/` directory if it doesn't exist
-- Start the server on `https://127.0.0.1:8443`
+- Start the server on `https://127.0.0.1:7833` (port 7833 = "RUFF" on phone keypad! 🐕)
 - Use default credentials: `admin`/`admin`
 
 ### Production
@@ -65,7 +68,7 @@ This will:
   --username your_username \
   --password your_secure_password \
   --host 0.0.0.0 \
-  --port 8443
+  --port 7833
 ```
 
 #### Option 2: Using on-the-fly self-signed certificates (development only)
@@ -77,7 +80,7 @@ This will:
   --username your_username \
   --password your_password \
   --host 127.0.0.1 \
-  --port 8443
+  --port 7833
 ```
 
 **Warning**: Self-signed certificates are NOT suitable for production! Use proper certificates from a trusted CA like Let's Encrypt.
@@ -95,7 +98,7 @@ Options:
   --username <USERNAME>            Username for HTTP Basic Authentication
   --password <PASSWORD>            Password for HTTP Basic Authentication
   --host <HOST>                    Host to bind to [default: 0.0.0.0]
-  --port <PORT>                    Port to listen on [default: 8443]
+  --port <PORT>                    Port to listen on [default: 7833]
   -h, --help                       Print help
 ```
 
@@ -110,7 +113,7 @@ export DOGGYGALLERY_MEDIA_DIR=/path/to/media
 export DOGGYGALLERY_USERNAME=admin
 export DOGGYGALLERY_PASSWORD=secure_password
 export DOGGYGALLERY_HOST=0.0.0.0
-export DOGGYGALLERY_PORT=8443
+export DOGGYGALLERY_PORT=7833
 export DOGGYGALLERY_SELF_SIGNED=true
 
 ./target/release/doggygallery

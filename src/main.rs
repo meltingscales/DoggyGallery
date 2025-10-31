@@ -113,6 +113,8 @@ async fn main() -> anyhow::Result<()> {
     // Build the application router
     let app = Router::new()
         .route("/", get(handlers::index_handler))
+        .route("/browse", get(handlers::browse_redirect_handler))
+        .route("/browse/", get(handlers::browse_redirect_handler))
         .route("/browse/*path", get(handlers::list_directory_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
         .route("/api/filter", get(handlers::filter_handler))

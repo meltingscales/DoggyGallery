@@ -3,7 +3,7 @@ use axum::{
     body::Body,
     extract::{Path, Query, State},
     http::{header, StatusCode},
-    response::{Html, IntoResponse, Response, Json},
+    response::{Html, IntoResponse, Response, Json, Redirect},
 };
 use axum::http::header::CONTENT_SECURITY_POLICY;
 use percent_encoding::percent_decode_str;
@@ -23,6 +23,11 @@ pub struct AppState {
 /// Handler for the root path - shows the media directory
 pub async fn index_handler(State(state): State<AppState>) -> Result<Html<String>, AppError> {
     list_directory_handler(State(state), Path("".to_string())).await
+}
+
+/// Handler for /browse redirect - redirects to home page
+pub async fn browse_redirect_handler() -> Redirect {
+    Redirect::permanent("/")
 }
 
 /// Handler for listing directories
