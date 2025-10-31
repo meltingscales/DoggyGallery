@@ -4,6 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Filter - DoggyGallery</title>
+        <link rel="stylesheet" href="/static/css/lightbox.css" />
         <style>
             * {
                 margin: 0;
@@ -319,6 +320,21 @@
             </div>
         </div>
 
+        <div id="lightbox" class="lightbox" onclick="DoggyLightbox.close()">
+            <span class="lightbox-close">&times;</span>
+            <button class="lightbox-arrow prev" onclick="event.stopPropagation(); DoggyLightbox.prev();">&#8249;</button>
+            <button class="lightbox-arrow next" onclick="event.stopPropagation(); DoggyLightbox.next();">&#8250;</button>
+            <div class="lightbox-content" id="lightbox-content"></div>
+            <div class="lightbox-nav">
+                <button onclick="event.stopPropagation(); DoggyLightbox.prev();">← Prev</button>
+                <button onclick="event.stopPropagation(); DoggyLightbox.random();">🎲 Random</button>
+                <button onclick="event.stopPropagation(); DoggyLightbox.next();">Next →</button>
+            </div>
+        </div>
+
+        <script src="/static/js/utils.js"></script>
+        <script src="/static/js/api.js"></script>
+        <script src="/static/js/lightbox.js"></script>
         <script>
             const form = document.getElementById('filterForm');
             const resultsSection = document.getElementById('resultsSection');
@@ -327,35 +343,20 @@
             const emptyState = document.getElementById('emptyState');
             const loading = document.getElementById('loading');
 
-            // Format file size
-            function formatBytes(bytes) {
-                if (bytes === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-
-            // Get icon for file type
-            function getIcon(type) {
-                switch(type) {
-                    case 'image': return '🖼️';
-                    case 'video': return '🎬';
-                    case 'audio': return '🎵';
-                    default: return '📄';
-                }
-            }
+            // Use utility functions from modules
+            const { formatBytes, getFileIcon } = window.DoggyUtils;
+            const { searchMedia } = window.DoggyAPI;
 
             // Handle form submission
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 const formData = new FormData(form);
-                const params = new URLSearchParams();
+                const filters = {};
 
                 for (const [key, value] of formData.entries()) {
                     if (value) {
-                        params.append(key, value);
+                        filters[key] = value;
                     }
                 }
 
@@ -365,8 +366,7 @@
                 emptyState.style.display = 'none';
 
                 try {
-                    const response = await fetch(`/api/filter?${params.toString()}`);
-                    const data = await response.json();
+                    const data = await searchMedia(filters);
 
                     // Hide loading
                     loading.style.display = 'none';
@@ -394,14 +394,23 @@
                 resultsSection.style.display = 'block';
                 emptyState.style.display = 'none';
 
-                results.forEach(result => {
+                // Build array of media items for lightbox
+                const mediaItems = results.map(result => ({
+                    src: `/media/${result.path}`,
+                    type: result.file_type
+                }));
+
+                // Initialize lightbox with media items
+                DoggyLightbox.init(mediaItems);
+
+                results.forEach((result, index) => {
                     const item = document.createElement('div');
                     item.className = 'result-item';
-                    item.onclick = () => window.location.href = `/media/${result.path}`;
+                    item.onclick = () => DoggyLightbox.open(`/media/${result.path}`, result.file_type);
 
                     item.innerHTML = `
                         <div class="result-icon ${result.file_type}">
-                            ${getIcon(result.file_type)}
+                            ${getFileIcon(result.file_type)}
                         </div>
                         <div class="result-info">
                             <div class="result-name">${result.name}</div>

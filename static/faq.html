@@ -330,35 +330,31 @@
                 <div class="faq-question">
                     📁 What file types are supported?
                 </div>
-                <div class="faq-answer">
+                <div class="faq-answer" id="fileTypesSection">
                     <p>
-                        DoggyGallery displays images and videos in a beautiful,
+                        DoggyGallery supports images, videos, and audio files in a beautiful,
                         responsive grid:
                     </p>
 
                     <p style="margin-top: 15px">
                         <strong>Images:</strong>
                     </p>
-                    <ul>
-                        <li>JPEG (.jpg, .jpeg)</li>
-                        <li>PNG (.png)</li>
-                        <li>GIF (.gif)</li>
-                        <li>WebP (.webp)</li>
-                        <li>BMP (.bmp)</li>
-                        <li>SVG (.svg) - served with sandboxed CSP</li>
+                    <ul id="imageExtensions">
+                        <li><em>Loading...</em></li>
                     </ul>
 
                     <p style="margin-top: 15px">
                         <strong>Videos:</strong>
                     </p>
-                    <ul>
-                        <li>MP4 (.mp4)</li>
-                        <li>WebM (.webm)</li>
-                        <li>MKV (.mkv)</li>
-                        <li>AVI (.avi)</li>
-                        <li>MOV (.mov)</li>
-                        <li>FLV (.flv)</li>
-                        <li>WMV (.wmv)</li>
+                    <ul id="videoExtensions">
+                        <li><em>Loading...</em></li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>Audio:</strong>
+                    </p>
+                    <ul id="audioExtensions">
+                        <li><em>Loading...</em></li>
                     </ul>
 
                     <p style="margin-top: 15px">
@@ -366,6 +362,13 @@
                         in a lightbox with navigation controls. All other file types
                         are ignored for security.
                     </p>
+
+                    <div class="info-box" style="margin-top: 15px">
+                        <strong>MIME Type Validation:</strong> DoggyGallery validates
+                        file content using magic bytes, not just extensions. This prevents
+                        malicious files disguised with fake extensions (e.g., malware.exe
+                        renamed to photo.jpg) from being served.
+                    </div>
                 </div>
 
                 <div class="faq-question">
@@ -434,6 +437,51 @@
                             for rate limiting and not permanently stored
                         </li>
                     </ul>
+                </div>
+
+                <div class="faq-question">
+                    🌐 What about HTTP/2 and HTTP/3?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        <strong>DoggyGallery enforces HTTP/2 only</strong> - there is no fallback
+                        to HTTP/1.1. This provides significant performance and security benefits:
+                    </p>
+
+                    <p style="margin-top: 15px">
+                        <strong>HTTP/2 Benefits:</strong>
+                    </p>
+                    <ul>
+                        <li><strong>Multiplexing:</strong> Multiple requests over a single TCP connection</li>
+                        <li><strong>Header compression:</strong> Reduces overhead significantly</li>
+                        <li><strong>Server push:</strong> Proactive resource delivery</li>
+                        <li><strong>Binary protocol:</strong> More efficient parsing</li>
+                        <li><strong>Stream prioritization:</strong> Better resource loading order</li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>Why not HTTP/3?</strong>
+                    </p>
+                    <p>
+                        HTTP/3 uses QUIC (UDP-based) instead of TCP, which requires a completely
+                        different server architecture. While HTTP/3 offers benefits like:
+                    </p>
+                    <ul>
+                        <li>Faster connection establishment</li>
+                        <li>Better handling of packet loss</li>
+                        <li>Connection migration</li>
+                    </ul>
+                    <p style="margin-top: 10px">
+                        ...implementing it would require migrating from <code>axum-server</code>
+                        to <code>quinn</code> or <code>h3</code>, which is beyond the current scope.
+                        HTTP/2 over TLS 1.3 already provides excellent performance and security.
+                    </p>
+
+                    <div class="highlight-box">
+                        <strong>Current Stack:</strong> TLS 1.3 + HTTP/2 ONLY<br/>
+                        All connections must support HTTP/2. Clients that don't support HTTP/2
+                        (very rare in 2025) will not be able to connect.
+                    </div>
                 </div>
 
                 <div class="faq-question">
@@ -541,5 +589,46 @@ cargo build --release
                 </div>
             </div>
         </div>
+
+        <script src="/static/js/utils.js"></script>
+        <script src="/static/js/api.js"></script>
+        <script>
+            const { fetchConfig } = window.DoggyAPI;
+
+            async function loadConfig() {
+                try {
+                    const config = await fetchConfig();
+
+                    // Populate image extensions
+                    const imageList = document.getElementById('imageExtensions');
+                    imageList.innerHTML = config.image_extensions
+                        .map(ext => `<li>${ext}</li>`)
+                        .join('');
+
+                    // Populate video extensions
+                    const videoList = document.getElementById('videoExtensions');
+                    videoList.innerHTML = config.video_extensions
+                        .map(ext => `<li>${ext}</li>`)
+                        .join('');
+
+                    // Populate audio extensions
+                    const audioList = document.getElementById('audioExtensions');
+                    audioList.innerHTML = config.audio_extensions
+                        .map(ext => `<li>${ext}</li>`)
+                        .join('');
+                } catch (error) {
+                    console.error('Failed to load configuration:', error);
+
+                    // Show fallback error message
+                    ['imageExtensions', 'videoExtensions', 'audioExtensions'].forEach(id => {
+                        const list = document.getElementById(id);
+                        list.innerHTML = '<li><em style="color: #f59e0b;">Failed to load extensions from API</em></li>';
+                    });
+                }
+            }
+
+            // Load config when page loads
+            document.addEventListener('DOMContentLoaded', loadConfig);
+        </script>
     </body>
 </html>

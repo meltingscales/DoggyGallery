@@ -1,0 +1,110 @@
+/* Lightbox styles for DoggyGallery */
+
+.lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox.active {
+    display: flex;
+}
+
+.lightbox-content {
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.lightbox img,
+.lightbox video {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 8px;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 40px;
+    cursor: pointer;
+    z-index: 1001;
+}
+
+.lightbox-nav {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 1001;
+}
+
+.lightbox-nav button {
+    background: rgba(102, 126, 234, 0.9);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-nav button:hover {
+    background: rgba(85, 104, 211, 0.9);
+}
+
+.lightbox-nav button:active {
+    transform: scale(0.95);
+}
+
+.lightbox-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(102, 126, 234, 0.7);
+    color: white;
+    border: none;
+    padding: 20px 15px;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 1001;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.lightbox-arrow:hover {
+    background: rgba(85, 104, 211, 0.9);
+}
+
+.lightbox-arrow.prev {
+    left: 20px;
+}
+
+.lightbox-arrow.next {
+    right: 20px;
+}
+
+@media (max-width: 768px) {
+    .lightbox-nav button {
+        padding: 15px 25px;
+        font-size: 18px;
+    }
+
+    .lightbox-arrow {
+        padding: 25px 20px;
+        font-size: 28px;
+    }
+}

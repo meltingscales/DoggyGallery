@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DoggyGallery{% if listing.current_path != "" %} - {{ listing.current_path }}{% endif %}</title>
+    <link rel="stylesheet" href="/static/css/lightbox.css" />
     <style>
         * {
             margin: 0;
@@ -203,103 +204,6 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .lightbox {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .lightbox.active {
-            display: flex;
-        }
-
-        .lightbox-content {
-            max-width: 90%;
-            max-height: 90%;
-        }
-
-        .lightbox img,
-        .lightbox video {
-            max-width: 100%;
-            max-height: 90vh;
-            border-radius: 8px;
-        }
-
-        .lightbox-close {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-        .lightbox-nav {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            z-index: 1001;
-        }
-
-        .lightbox-nav button {
-            background: rgba(102, 126, 234, 0.9);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-weight: 600;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        .lightbox-nav button:hover {
-            background: rgba(85, 104, 211, 0.9);
-        }
-
-        .lightbox-nav button:active {
-            transform: scale(0.95);
-        }
-
-        .lightbox-arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(102, 126, 234, 0.7);
-            color: white;
-            border: none;
-            padding: 20px 15px;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 1001;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-
-        .lightbox-arrow:hover {
-            background: rgba(85, 104, 211, 0.9);
-        }
-
-        .lightbox-arrow.prev {
-            left: 20px;
-        }
-
-        .lightbox-arrow.next {
-            right: 20px;
-        }
-
         @media (max-width: 768px) {
             .gallery {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -308,16 +212,6 @@
 
             h1 {
                 font-size: 22px;
-            }
-
-            .lightbox-nav button {
-                padding: 15px 25px;
-                font-size: 18px;
-            }
-
-            .lightbox-arrow {
-                padding: 25px 20px;
-                font-size: 28px;
             }
         }
     </style>
@@ -397,30 +291,25 @@
         {% endif %}
     </div>
 
-    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+    <div id="lightbox" class="lightbox" onclick="DoggyLightbox.close()">
         <span class="lightbox-close">&times;</span>
-        <button class="lightbox-arrow prev" onclick="event.stopPropagation(); prevMedia();">&#8249;</button>
-        <button class="lightbox-arrow next" onclick="event.stopPropagation(); nextMedia();">&#8250;</button>
+        <button class="lightbox-arrow prev" onclick="event.stopPropagation(); DoggyLightbox.prev();">&#8249;</button>
+        <button class="lightbox-arrow next" onclick="event.stopPropagation(); DoggyLightbox.next();">&#8250;</button>
         <div class="lightbox-content" id="lightbox-content"></div>
         <div class="lightbox-nav">
-            <button onclick="event.stopPropagation(); prevMedia();">← Prev</button>
-            <button onclick="event.stopPropagation(); randomMedia();">🎲 Random</button>
-            <button onclick="event.stopPropagation(); nextMedia();">Next →</button>
+            <button onclick="event.stopPropagation(); DoggyLightbox.prev();">← Prev</button>
+            <button onclick="event.stopPropagation(); DoggyLightbox.random();">🎲 Random</button>
+            <button onclick="event.stopPropagation(); DoggyLightbox.next();">Next →</button>
         </div>
     </div>
 
+    <script src="/static/js/lightbox.js"></script>
     <script>
-        // Build array of all media items (images and videos only)
-        let mediaItems = [];
-        let currentIndex = 0;
-
-        // Touch handling for swipe gestures
-        let touchStartX = 0;
-        let touchEndX = 0;
-
-        // Initialize media items array on page load
+        // Build array of all media items (images, videos, and audio)
         document.addEventListener('DOMContentLoaded', function() {
+            const mediaItems = [];
             const galleryItems = document.querySelectorAll('.gallery-item[onclick]');
+
             galleryItems.forEach(item => {
                 const onclick = item.getAttribute('onclick');
                 if (onclick) {
@@ -435,130 +324,14 @@
                 }
             });
 
-            // Add keyboard event listener
-            document.addEventListener('keydown', handleKeyboard);
-
-            // Add touch event listeners for swipe
-            const lightboxContent = document.getElementById('lightbox-content');
-            lightboxContent.addEventListener('touchstart', handleTouchStart, false);
-            lightboxContent.addEventListener('touchend', handleTouchEnd, false);
+            // Initialize lightbox with media items
+            DoggyLightbox.init(mediaItems);
         });
 
+        // Keep the openLightbox function for template compatibility
         function openLightbox(src, type) {
-            // Find the index of this media item
-            currentIndex = mediaItems.findIndex(item => item.src === src);
-            if (currentIndex === -1) currentIndex = 0;
-
-            displayMedia(currentIndex);
-            document.getElementById('lightbox').classList.add('active');
+            DoggyLightbox.open(src, type);
         }
-
-        function displayMedia(index) {
-            if (mediaItems.length === 0) return;
-
-            // Wrap around if out of bounds
-            if (index < 0) index = mediaItems.length - 1;
-            if (index >= mediaItems.length) index = 0;
-
-            currentIndex = index;
-            const item = mediaItems[currentIndex];
-            const content = document.getElementById('lightbox-content');
-            content.innerHTML = '';
-
-            if (item.type === 'image') {
-                const img = document.createElement('img');
-                img.src = item.src;
-                content.appendChild(img);
-            } else if (item.type === 'video') {
-                const video = document.createElement('video');
-                video.controls = true;
-                video.autoplay = true;
-                const source = document.createElement('source');
-                source.src = item.src;
-                video.appendChild(source);
-                content.appendChild(video);
-            } else if (item.type === 'audio') {
-                const audio = document.createElement('audio');
-                audio.controls = true;
-                audio.autoplay = true;
-                audio.style.width = '100%';
-                audio.style.maxWidth = '600px';
-                const source = document.createElement('source');
-                source.src = item.src;
-                audio.appendChild(source);
-                content.appendChild(audio);
-            }
-        }
-
-        function closeLightbox() {
-            const lightbox = document.getElementById('lightbox');
-            const content = document.getElementById('lightbox-content');
-            lightbox.classList.remove('active');
-            content.innerHTML = '';
-        }
-
-        function nextMedia() {
-            displayMedia(currentIndex + 1);
-        }
-
-        function prevMedia() {
-            displayMedia(currentIndex - 1);
-        }
-
-        function randomMedia() {
-            if (mediaItems.length <= 1) return;
-
-            let randomIndex;
-            do {
-                randomIndex = Math.floor(Math.random() * mediaItems.length);
-            } while (randomIndex === currentIndex);
-
-            displayMedia(randomIndex);
-        }
-
-        function handleKeyboard(e) {
-            const lightbox = document.getElementById('lightbox');
-            if (!lightbox.classList.contains('active')) return;
-
-            if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                nextMedia();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                prevMedia();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                closeLightbox();
-            }
-        }
-
-        function handleTouchStart(e) {
-            touchStartX = e.changedTouches[0].screenX;
-        }
-
-        function handleTouchEnd(e) {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }
-
-        function handleSwipe() {
-            const swipeThreshold = 50; // Minimum distance for a swipe
-            const diff = touchStartX - touchEndX;
-
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    // Swiped left, show next
-                    nextMedia();
-                } else {
-                    // Swiped right, show previous
-                    prevMedia();
-                }
-            }
-        }
-
-        document.getElementById('lightbox-content').onclick = function(e) {
-            e.stopPropagation();
-        };
     </script>
 </body>
 </html>
