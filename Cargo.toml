@@ -50,6 +50,10 @@ mime_guess = "2.0"
 percent-encoding = "2.3"
 infer = "0.16"
 rust-embed = "8.5"
+zip = "2.1"
+tar = "0.4"
+flate2 = "1.0"
+id3 = "1.13"
 
 # Logging
 tracing = "0.1"

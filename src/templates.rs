@@ -7,3 +7,9 @@ pub struct GalleryTemplate {
     pub listing: DirectoryListing,
     pub emoji_prefix: &'static str,
 }
+
+#[derive(Template)]
+#[template(path = "music_player.html")]
+pub struct MusicPlayerTemplate {
+    pub listing: DirectoryListing,
+}

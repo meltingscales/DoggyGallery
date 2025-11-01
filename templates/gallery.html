@@ -14,6 +14,7 @@
             <h1>
                 <span>{{ emoji_prefix }} DoggyGallery</span>
                 <div style="display: flex; gap: 8px;">
+                    <a href="/music" class="faq-link">🎵 Music</a>
                     <a href="/static/filter.html" class="faq-link">🔍 Filter</a>
                     <a href="/static/faq.html" class="faq-link">FAQ</a>
                     <a href="/docs" class="faq-link">📚 API</a>
@@ -48,7 +49,7 @@
                             </div>
                         </a>
                     {% else if entry.is_image() %}
-                        <div class="gallery-item" onclick="openLightbox('/media/{{ entry.path }}', 'image')">
+                        <div class="gallery-item media-item" data-media-path="{{ entry.path }}" data-media-type="image">
                             <img src="/media/{{ entry.path }}" alt="{{ entry.name }}" class="thumbnail" loading="lazy">
                             <div class="item-info">
                                 <div class="item-name">{{ entry.name }}</div>
@@ -57,7 +58,7 @@
                             </div>
                         </div>
                     {% else if entry.is_video() %}
-                        <div class="gallery-item" onclick="openLightbox('/media/{{ entry.path }}', 'video')">
+                        <div class="gallery-item media-item" data-media-path="{{ entry.path }}" data-media-type="video">
                             <div class="video-thumbnail">
                                 <video class="thumbnail" preload="metadata">
                                     <source src="/media/{{ entry.path }}#t=0.5">
@@ -70,7 +71,7 @@
                             </div>
                         </div>
                     {% else if entry.is_audio() %}
-                        <div class="gallery-item" onclick="openLightbox('/media/{{ entry.path }}', 'audio')">
+                        <div class="gallery-item media-item" data-media-path="{{ entry.path }}" data-media-type="audio">
                             <div class="audio-icon">🎵</div>
                             <div class="item-info">
                                 <div class="item-name">{{ entry.name }}</div>
@@ -101,24 +102,31 @@
         // Build array of all media items (images, videos, and audio)
         document.addEventListener('DOMContentLoaded', function() {
             const mediaItems = [];
-            const galleryItems = document.querySelectorAll('.gallery-item[onclick]');
+            const galleryItems = document.querySelectorAll('.gallery-item.media-item');
 
             galleryItems.forEach(item => {
-                const onclick = item.getAttribute('onclick');
-                if (onclick) {
-                    // Extract src and type from onclick="openLightbox('/media/...', 'image')"
-                    const match = onclick.match(/openLightbox\('([^']+)',\s*'([^']+)'\)/);
-                    if (match) {
-                        mediaItems.push({
-                            src: match[1],
-                            type: match[2]
-                        });
-                    }
+                const path = item.getAttribute('data-media-path');
+                const type = item.getAttribute('data-media-type');
+                if (path && type) {
+                    mediaItems.push({
+                        src: '/media/' + path,
+                        type: type
+                    });
                 }
             });
 
             // Initialize lightbox with media items
             DoggyLightbox.init(mediaItems);
+
+            // Add click handler for media items
+            document.addEventListener('click', function(e) {
+                const mediaItem = e.target.closest('.media-item[data-media-path]');
+                if (mediaItem) {
+                    const path = mediaItem.getAttribute('data-media-path');
+                    const type = mediaItem.getAttribute('data-media-type');
+                    DoggyLightbox.open('/media/' + path, type);
+                }
+            });
         });
 
         // Keep the openLightbox function for template compatibility

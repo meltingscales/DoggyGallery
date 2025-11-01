@@ -306,6 +306,36 @@ label {
     color: white;
 }
 
+.audio-thumbnail-container {
+    width: 100%;
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+    background: var(--audio-bg);
+}
+
+.audio-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.audio-icon-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    color: white;
+    background: var(--audio-bg);
+}
+
+.audio-item, .media-item {
+    cursor: pointer;
+}
+
 .item-info {
     padding: 16px;
 }

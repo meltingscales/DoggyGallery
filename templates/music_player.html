@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>🎵 Music Player{% if listing.current_path != "" %} - {{ listing.current_path }}{% endif %}</title>
+    <link rel="stylesheet" href="/static/css/main.css" />
+    <link rel="stylesheet" href="/static/css/lightbox.css" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <span>🎵 Music Player</span>
+                <div style="display: flex; gap: 8px;">
+                    <a href="/" class="faq-link">🖼️ Gallery</a>
+                    <a href="/static/filter.html" class="faq-link">🔍 Filter</a>
+                    <a href="/static/faq.html" class="faq-link">FAQ</a>
+                    <a href="/docs" class="faq-link">📚 API</a>
+                </div>
+            </h1>
+            <div class="breadcrumb">
+                <a href="/music">Music Home</a>
+                {% if listing.current_path != "" %}
+                    / {{ listing.current_path }}
+                {% endif %}
+            </div>
+            {% if let Some(parent) = listing.parent_path %}
+                <a href="/music/{{ parent }}" class="back-button">← Back</a>
+            {% endif %}
+        </header>
+
+        {% if listing.entries.is_empty() %}
+            <div class="empty">
+                <p>No audio files or directories found in this location.</p>
+            </div>
+        {% else %}
+            <!-- Show statistics -->
+            {% set audio_count = 0 %}
+            {% set dir_count = 0 %}
+            {% for entry in listing.entries %}
+                {% if entry.is_audio() %}
+                    {% set audio_count = audio_count + 1 %}
+                {% else if entry.is_directory() %}
+                    {% set dir_count = dir_count + 1 %}
+                {% endif %}
+            {% endfor %}
+
+            {% if audio_count > 0 %}
+                <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-card); border-radius: 8px; display: flex; gap: 1rem; align-items: center;">
+                    <span>📊 {{ audio_count }} audio file{% if audio_count != 1 %}s{% endif %}</span>
+                    {% if dir_count > 0 %}
+                        <span>📁 {{ dir_count }} folder{% if dir_count != 1 %}s{% endif %}</span>
+                    {% endif %}
+                    {% if audio_count > 1 %}
+                        <button onclick="playAllRandom()" style="margin-left: auto; padding: 0.5rem 1rem; background: var(--audio-bg); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                            🎲 Play All Random
+                        </button>
+                        <button onclick="playAllSequential()" style="padding: 0.5rem 1rem; background: var(--audio-bg); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                            ▶️ Play All
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="gallery">
+                {% for entry in listing.entries %}
+                    {% if entry.is_directory() %}
+                        <a href="/music/{{ entry.path }}" style="text-decoration: none; color: inherit;">
+                            <div class="gallery-item directory">
+                                <div class="directory-icon">📁</div>
+                                <div class="item-info">
+                                    <div class="item-name">{{ entry.name }}</div>
+                                    <span class="item-type directory">Album Folder</span>
+                                </div>
+                            </div>
+                        </a>
+                    {% else if entry.is_archive() %}
+                        <a href="/music-archive/{{ entry.path }}" style="text-decoration: none; color: inherit;">
+                            <div class="gallery-item directory">
+                                <div class="directory-icon">🗜️</div>
+                                <div class="item-info">
+                                    <div class="item-name">{{ entry.name }}</div>
+                                    <div class="item-size">{{ entry.formatted_size() }}</div>
+                                    <span class="item-type directory">Music Archive</span>
+                                </div>
+                            </div>
+                        </a>
+                    {% else if entry.is_audio() %}
+                        <div class="gallery-item audio-item" data-audio-path="{{ entry.path }}">
+                            <div class="audio-thumbnail-container">
+                                <img src="/album-art/{{ entry.path }}"
+                                     alt="Album Art"
+                                     class="audio-thumbnail"
+                                     loading="lazy"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="audio-icon-fallback" style="display:none;">🎵</div>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-name">{{ entry.name }}</div>
+                                <div class="item-size">{{ entry.formatted_size() }}</div>
+                                <span class="item-type audio">Audio</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div id="lightbox" class="lightbox" onclick="DoggyLightbox.close()">
+        <span class="lightbox-close">&times;</span>
+        <button class="lightbox-arrow prev" onclick="event.stopPropagation(); DoggyLightbox.prev();">&#8249;</button>
+        <button class="lightbox-arrow next" onclick="event.stopPropagation(); DoggyLightbox.next();">&#8250;</button>
+        <div class="lightbox-content" id="lightbox-content"></div>
+        <div class="lightbox-nav">
+            <button onclick="event.stopPropagation(); DoggyLightbox.prev();">← Prev</button>
+            <button onclick="event.stopPropagation(); DoggyLightbox.random();">🎲 Random</button>
+            <button id="shuffle-btn" onclick="event.stopPropagation(); toggleShuffle();">🔀 Shuffle: OFF</button>
+            <button onclick="event.stopPropagation(); DoggyLightbox.next();">Next →</button>
+        </div>
+    </div>
+
+    <script src="/static/js/lightbox.js"></script>
+    <script src="/static/js/music-player.js"></script>
+    <script>
+        // Build array of all audio items
+        document.addEventListener('DOMContentLoaded', function() {
+            const mediaItems = [];
+            const galleryItems = document.querySelectorAll('.gallery-item.audio-item');
+
+            galleryItems.forEach(item => {
+                const path = item.getAttribute('data-audio-path');
+                if (path) {
+                    const isArchivePath = path.includes('!/');
+                    const prefix = isArchivePath ? '/media-archive/' : '/media/';
+                    mediaItems.push({
+                        src: prefix + path,
+                        type: 'audio'
+                    });
+                }
+            });
+
+            // Initialize lightbox with media items
+            DoggyLightbox.init(mediaItems);
+
+            // Initialize music player features
+            if (window.MusicPlayer) {
+                MusicPlayer.init(mediaItems);
+            }
+
+            // Add click handler for audio items
+            document.addEventListener('click', function(e) {
+                const audioItem = e.target.closest('.audio-item[data-audio-path]');
+                if (audioItem) {
+                    const path = audioItem.getAttribute('data-audio-path');
+                    openLightboxSmart(path, 'audio');
+                }
+            });
+        });
+
+        // Keep the openLightbox function for template compatibility
+        function openLightbox(src, type) {
+            DoggyLightbox.open(src, type);
+        }
+
+        // Smart lightbox opener that detects archive paths
+        function openLightboxSmart(path, type) {
+            // Check if path contains archive marker "!/"
+            const isArchivePath = path.includes('!/');
+            const prefix = isArchivePath ? '/media-archive/' : '/media/';
+            DoggyLightbox.open(prefix + path, type);
+        }
+
+        // Play all random button handler
+        function playAllRandom() {
+            if (window.MusicPlayer) {
+                MusicPlayer.playAllRandom();
+            }
+        }
+
+        // Play all sequential button handler
+        function playAllSequential() {
+            if (window.MusicPlayer) {
+                MusicPlayer.playAllSequential();
+            }
+        }
+
+        // Toggle shuffle button handler
+        function toggleShuffle() {
+            if (window.MusicPlayer) {
+                MusicPlayer.toggleShuffle();
+            }
+        }
+    </script>
+</body>
+</html>

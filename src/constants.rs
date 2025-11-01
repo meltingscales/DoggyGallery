@@ -25,3 +25,8 @@ pub const VIDEO_EXTENSIONS: &[&str] = &[
 pub const AUDIO_EXTENSIONS: &[&str] = &[
     ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".opus", ".weba"
 ];
+
+/// Supported archive file extensions
+pub const ARCHIVE_EXTENSIONS: &[&str] = &[
+    ".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2"
+];

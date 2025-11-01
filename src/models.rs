@@ -22,6 +22,7 @@ pub enum EntryType {
     Image,
     Video,
     Audio,
+    Archive,
 }
 
 impl DirectoryEntry {
@@ -43,6 +44,10 @@ impl DirectoryEntry {
 
     pub fn is_audio(&self) -> bool {
         matches!(self.entry_type, EntryType::Audio)
+    }
+
+    pub fn is_archive(&self) -> bool {
+        matches!(self.entry_type, EntryType::Archive)
     }
 }
 

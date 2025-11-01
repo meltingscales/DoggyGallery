@@ -15,6 +15,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 mod api;
+mod archives;
 mod auth;
 mod config;
 mod constants;
@@ -117,7 +118,13 @@ async fn main() -> anyhow::Result<()> {
         .route("/browse", get(handlers::browse_redirect_handler))
         .route("/browse/", get(handlers::browse_redirect_handler))
         .route("/browse/*path", get(handlers::list_directory_handler))
+        .route("/music", get(handlers::music_index_handler))
+        .route("/music/", get(handlers::music_redirect_handler))
+        .route("/music/*path", get(handlers::music_list_handler))
+        .route("/music-archive/*path", get(handlers::music_archive_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
+        .route("/media-archive/*path", get(handlers::serve_archive_file_handler))
+        .route("/album-art/*path", get(handlers::serve_album_art_handler))
         .route("/api/filter", get(handlers::filter_handler))
         .route("/api/config", get(api::config_handler))
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))

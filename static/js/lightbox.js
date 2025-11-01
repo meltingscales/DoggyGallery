@@ -77,15 +77,7 @@
             video.appendChild(source);
             content.appendChild(video);
         } else if (item.type === 'audio') {
-            const audio = document.createElement('audio');
-            audio.controls = true;
-            audio.autoplay = true;
-            audio.style.width = '100%';
-            audio.style.maxWidth = '600px';
-            const source = document.createElement('source');
-            source.src = item.src;
-            audio.appendChild(source);
-            content.appendChild(audio);
+            createEnhancedAudioPlayer(item.src, content);
         }
     }
 
@@ -184,6 +176,206 @@
                 prevMedia();
             }
         }
+    }
+
+    /**
+     * Create an enhanced audio player with album art, volume, and scrubbing
+     * @param {string} src - Audio source URL
+     * @param {HTMLElement} container - Container to append player to
+     */
+    function createEnhancedAudioPlayer(src, container) {
+        // Create player container
+        const playerContainer = document.createElement('div');
+        playerContainer.className = 'enhanced-audio-player';
+
+        // Get track name from URL
+        const trackName = decodeURIComponent(src.split('/').pop().split('?')[0]);
+
+        // Get directory path for album art search
+        const pathParts = src.split('/');
+        const dirPath = pathParts.slice(0, -1).join('/');
+
+        // Create album art container
+        const albumArtContainer = document.createElement('div');
+        albumArtContainer.className = 'album-art-container';
+
+        const albumArt = document.createElement('img');
+        albumArt.className = 'album-art';
+        albumArt.src = '/static/img/default-album-art.svg';
+        albumArt.alt = 'Album Art';
+
+        // Try to find album art in the same directory
+        tryLoadAlbumArt(dirPath, albumArt);
+
+        albumArtContainer.appendChild(albumArt);
+
+        // Create track info
+        const trackInfo = document.createElement('div');
+        trackInfo.className = 'track-info';
+        trackInfo.textContent = trackName;
+
+        // Create audio element (hidden)
+        const audio = document.createElement('audio');
+        audio.className = 'audio-element';
+        audio.src = src;
+        audio.autoplay = true;
+
+        // Create controls container
+        const controlsContainer = document.createElement('div');
+        controlsContainer.className = 'audio-controls';
+
+        // Time display
+        const timeDisplay = document.createElement('div');
+        timeDisplay.className = 'time-display';
+        timeDisplay.textContent = '0:00 / 0:00';
+
+        // Seek slider
+        const seekSlider = document.createElement('input');
+        seekSlider.type = 'range';
+        seekSlider.min = '0';
+        seekSlider.max = '100';
+        seekSlider.value = '0';
+        seekSlider.className = 'seek-slider';
+
+        // Play/Pause button
+        const playPauseBtn = document.createElement('button');
+        playPauseBtn.className = 'play-pause-btn';
+        playPauseBtn.innerHTML = '⏸';
+        playPauseBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (audio.paused) {
+                audio.play();
+                playPauseBtn.innerHTML = '⏸';
+            } else {
+                audio.pause();
+                playPauseBtn.innerHTML = '▶';
+            }
+        };
+
+        // Volume container
+        const volumeContainer = document.createElement('div');
+        volumeContainer.className = 'volume-container';
+
+        const volumeIcon = document.createElement('span');
+        volumeIcon.className = 'volume-icon';
+        volumeIcon.textContent = '🔊';
+
+        const volumeSlider = document.createElement('input');
+        volumeSlider.type = 'range';
+        volumeSlider.min = '0';
+        volumeSlider.max = '100';
+        volumeSlider.value = '100';
+        volumeSlider.className = 'volume-slider';
+
+        // Event listeners
+        audio.addEventListener('loadedmetadata', () => {
+            seekSlider.max = audio.duration;
+            updateTimeDisplay();
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            if (!seekSlider.dataset.seeking) {
+                seekSlider.value = audio.currentTime;
+            }
+            updateTimeDisplay();
+        });
+
+        seekSlider.addEventListener('mousedown', () => {
+            seekSlider.dataset.seeking = 'true';
+        });
+
+        seekSlider.addEventListener('mouseup', () => {
+            delete seekSlider.dataset.seeking;
+        });
+
+        seekSlider.addEventListener('input', () => {
+            audio.currentTime = seekSlider.value;
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            audio.volume = volumeSlider.value / 100;
+            updateVolumeIcon();
+        });
+
+        function updateTimeDisplay() {
+            const current = formatTime(audio.currentTime);
+            const total = formatTime(audio.duration);
+            timeDisplay.textContent = `${current} / ${total}`;
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateVolumeIcon() {
+            const volume = audio.volume;
+            if (volume === 0) {
+                volumeIcon.textContent = '🔇';
+            } else if (volume < 0.5) {
+                volumeIcon.textContent = '🔉';
+            } else {
+                volumeIcon.textContent = '🔊';
+            }
+        }
+
+        // Assemble controls
+        volumeContainer.appendChild(volumeIcon);
+        volumeContainer.appendChild(volumeSlider);
+
+        const playbackControls = document.createElement('div');
+        playbackControls.className = 'playback-controls';
+        playbackControls.appendChild(playPauseBtn);
+        playbackControls.appendChild(volumeContainer);
+
+        controlsContainer.appendChild(timeDisplay);
+        controlsContainer.appendChild(seekSlider);
+        controlsContainer.appendChild(playbackControls);
+
+        // Assemble player
+        playerContainer.appendChild(albumArtContainer);
+        playerContainer.appendChild(trackInfo);
+        playerContainer.appendChild(audio);
+        playerContainer.appendChild(controlsContainer);
+
+        container.appendChild(playerContainer);
+
+        // Store reference for ended event handling
+        container.audioElement = audio;
+    }
+
+    /**
+     * Try to load album art from the same directory
+     * @param {string} dirPath - Directory path
+     * @param {HTMLImageElement} imgElement - Image element to update
+     */
+    function tryLoadAlbumArt(dirPath, imgElement) {
+        const commonNames = ['cover.jpg', 'cover.png', 'folder.jpg', 'folder.png', 'album.jpg', 'album.png'];
+
+        let found = false;
+
+        async function tryNext(index) {
+            if (index >= commonNames.length || found) return;
+
+            const artPath = `${dirPath}/${commonNames[index]}`;
+
+            // Try to load the image
+            const testImg = new Image();
+            testImg.onload = () => {
+                if (!found) {
+                    found = true;
+                    imgElement.src = artPath;
+                }
+            };
+            testImg.onerror = () => {
+                tryNext(index + 1);
+            };
+            testImg.src = artPath;
+        }
+
+        tryNext(0);
     }
 
     // Export functions (only if not already defined)

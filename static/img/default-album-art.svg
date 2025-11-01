@@ -1,0 +1,37 @@
+<svg width="280" height="280" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="280" height="280" fill="url(#bg-gradient)" rx="12"/>
+
+  <!-- Music Note -->
+  <g transform="translate(80, 60)">
+    <!-- Note stem -->
+    <rect x="85" y="20" width="8" height="95" fill="white" rx="4"/>
+
+    <!-- Note flag -->
+    <path d="M 93 20 Q 120 15, 120 40 Q 120 55, 93 50 Z" fill="white"/>
+
+    <!-- Note head 1 -->
+    <ellipse cx="89" cy="115" rx="20" ry="14" fill="white"/>
+    <ellipse cx="89" cy="115" rx="12" ry="8" fill="#667eea"/>
+
+    <!-- Second note -->
+    <rect x="50" y="40" width="8" height="85" fill="white" rx="4"/>
+
+    <!-- Note head 2 -->
+    <ellipse cx="54" cy="125" rx="20" ry="14" fill="white"/>
+    <ellipse cx="54" cy="125" rx="12" ry="8" fill="#764ba2"/>
+  </g>
+
+  <!-- Decorative elements -->
+  <circle cx="40" cy="40" r="3" fill="white" opacity="0.6"/>
+  <circle cx="240" cy="50" r="4" fill="white" opacity="0.5"/>
+  <circle cx="230" cy="230" r="3" fill="white" opacity="0.6"/>
+  <circle cx="50" cy="240" r="4" fill="white" opacity="0.5"/>
+</svg>
