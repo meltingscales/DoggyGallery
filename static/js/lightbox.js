@@ -201,7 +201,7 @@
 
         const albumArt = document.createElement('img');
         albumArt.className = 'album-art';
-        albumArt.src = '/static/img/default-album-art.svg';
+        albumArt.src = '/static/img/default-album-art.png';
         albumArt.alt = 'Album Art';
 
         // Try to find album art in the same directory
