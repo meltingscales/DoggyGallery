@@ -219,6 +219,7 @@
         audio.className = 'audio-element';
         audio.src = src;
         audio.autoplay = true;
+        audio.preload = 'metadata'; // Enable seeking by preloading metadata
 
         // Create controls container
         const controlsContainer = document.createElement('div');
@@ -356,10 +357,22 @@
 
         let found = false;
 
+        // Check if this is an archive path
+        const isArchivePath = dirPath.includes('!/');
+
         async function tryNext(index) {
             if (index >= commonNames.length || found) return;
 
-            const artPath = `${dirPath}/${commonNames[index]}`;
+            let artPath;
+            if (isArchivePath) {
+                // For archive paths, replace the filename after !/ with cover image name
+                const parts = dirPath.split('!/');
+                const archivePath = parts[0];
+                const internalDir = parts[1].substring(0, parts[1].lastIndexOf('/'));
+                artPath = `${archivePath}!/${internalDir}/${commonNames[index]}`;
+            } else {
+                artPath = `${dirPath}/${commonNames[index]}`;
+            }
 
             // Try to load the image
             const testImg = new Image();

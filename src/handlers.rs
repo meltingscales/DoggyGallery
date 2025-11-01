@@ -256,8 +256,11 @@ pub async fn serve_archive_file_handler(
         return Err(AppError::NotFound);
     }
 
-    // Only serve audio files
-    if !is_audio(file_path_in_archive) {
+    // Only serve audio and image files
+    let is_audio_file = is_audio(file_path_in_archive);
+    let is_image_file = is_image(file_path_in_archive);
+
+    if !is_audio_file && !is_image_file {
         return Err(AppError::Forbidden);
     }
 
@@ -267,7 +270,8 @@ pub async fn serve_archive_file_handler(
         .map_err(|_| AppError::NotFound)?;
 
     // Validate MIME type from file contents
-    validate_mime_type(&contents, "audio/")?;
+    let expected_mime_prefix = if is_audio_file { "audio/" } else { "image/" };
+    validate_mime_type(&contents, expected_mime_prefix)?;
 
     // Determine MIME type for response
     let mime_type = mime_guess::from_path(file_path_in_archive)
@@ -352,6 +356,11 @@ pub async fn serve_album_art_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
 ) -> Result<Response, AppError> {
+    // Check if this is an archive path
+    if path.contains("!/") {
+        return serve_album_art_from_archive(state, path).await;
+    }
+
     // Validate and canonicalize the path
     let canonical_path = validate_media_path(&state.media_dir, &path)?;
 
@@ -395,6 +404,72 @@ pub async fn serve_album_art_handler(
     }
 
     // No album art found, return 404
+    Err(AppError::NotFound)
+}
+
+/// Handler for serving album art from MP3 files inside archives
+async fn serve_album_art_from_archive(
+    state: AppState,
+    path: String,
+) -> Result<Response, AppError> {
+    // Decode the URL-encoded path
+    let decoded_path = percent_decode_str(&path)
+        .decode_utf8()
+        .map_err(|_| AppError::InvalidPath)?;
+
+    // Split path into archive path and file path within archive
+    let parts: Vec<&str> = decoded_path.split("!/").collect();
+    if parts.len() != 2 {
+        return Err(AppError::InvalidPath);
+    }
+
+    let archive_path_str = parts[0];
+    let file_path_in_archive = parts[1];
+
+    // Validate and canonicalize the archive path
+    let canonical_archive_path = validate_media_path(&state.media_dir, archive_path_str)?;
+
+    // Check if it's a file (archive)
+    if !canonical_archive_path.is_file() {
+        return Err(AppError::NotFound);
+    }
+
+    // Only process audio files
+    if !is_audio(file_path_in_archive) {
+        return Err(AppError::Forbidden);
+    }
+
+    // Extract file from archive
+    let contents = archives::extract_file_from_archive(&canonical_archive_path, file_path_in_archive)
+        .await
+        .map_err(|_| AppError::NotFound)?;
+
+    // Try to extract album art from MP3 data
+    if let Ok(tag) = id3::Tag::read_from2(std::io::Cursor::new(&contents)) {
+        if let Some(picture) = tag.pictures().next() {
+            let mime_type = picture.mime_type.clone();
+            let data = picture.data.clone();
+
+            tracing::debug!(
+                archive = %archive_path_str,
+                file = %file_path_in_archive,
+                mime_type = %mime_type,
+                size = data.len(),
+                "Found album art in archived MP3 file"
+            );
+
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, mime_type)
+                .header(header::CACHE_CONTROL, "public, max-age=86400")
+                .body(Body::from(data))
+                .unwrap();
+
+            return Ok(response);
+        }
+    }
+
+    // No album art found
     Err(AppError::NotFound)
 }
 
@@ -508,6 +583,7 @@ pub async fn list_directory_handler(
 pub async fn serve_media_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Response, AppError> {
     // Decode the URL-encoded path
     let decoded_path = percent_decode_str(&path)
@@ -592,13 +668,52 @@ pub async fn serve_media_handler(
         .first_or_octet_stream()
         .to_string();
 
+    let file_size = contents.len() as u64;
+    let is_audio_file = is_audio(file_name);
+    let is_svg = file_name.to_lowercase().ends_with(".svg");
+
+    // Handle range requests for audio/video files (seeking/scrubbing support)
+    if is_audio_file || is_video(file_name) {
+        if let Some(range_header) = headers.get(header::RANGE) {
+            if let Ok(range_str) = range_header.to_str() {
+                if let Some(range) = parse_range_header(range_str, file_size) {
+                    let (start, end) = range;
+                    let content_length = end - start + 1;
+
+                    // Extract the requested byte range
+                    let range_contents = contents[start as usize..=end as usize].to_vec();
+
+                    let response = Response::builder()
+                        .status(StatusCode::PARTIAL_CONTENT)
+                        .header(header::CONTENT_TYPE, &mime_type)
+                        .header(header::CONTENT_LENGTH, content_length)
+                        .header(
+                            header::CONTENT_RANGE,
+                            format!("bytes {}-{}/{}", start, end, file_size),
+                        )
+                        .header(header::ACCEPT_RANGES, "bytes")
+                        .header(header::CACHE_CONTROL, "public, max-age=3600")
+                        .body(Body::from(range_contents))
+                        .unwrap();
+
+                    return Ok(response);
+                }
+            }
+        }
+    }
+
     // Special handling for SVG files to prevent XSS
-    // SVG files can contain JavaScript, so we sandbox them
     let mut response_builder = Response::builder()
         .status(StatusCode::OK)
+        .header(header::CONTENT_LENGTH, file_size)
         .header(header::CACHE_CONTROL, "public, max-age=3600");
 
-    if file_name.to_lowercase().ends_with(".svg") {
+    // Add Accept-Ranges header for audio/video files
+    if is_audio_file || is_video(file_name) {
+        response_builder = response_builder.header(header::ACCEPT_RANGES, "bytes");
+    }
+
+    if is_svg {
         // Serve SVG with restrictive CSP to prevent script execution
         response_builder = response_builder
             .header(header::CONTENT_TYPE, "image/svg+xml")
