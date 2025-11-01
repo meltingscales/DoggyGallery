@@ -370,6 +370,67 @@
                 </div>
 
                 <div class="faq-question">
+                    🔮 Is DoggyGallery quantum-resistant?
+                </div>
+                <div class="faq-answer">
+                    <p>
+                        <strong>Yes! DoggyGallery uses AWS-LC-RS cryptography</strong> which provides a
+                        foundation for post-quantum security:
+                    </p>
+
+                    <p style="margin-top: 15px">
+                        <strong>Current Quantum-Resistant Features:</strong>
+                    </p>
+                    <ul>
+                        <li>
+                            <strong>AWS-LC-RS crypto provider</strong> - Amazon's cryptographic library
+                            with NIST post-quantum algorithm implementations
+                        </li>
+                        <li>
+                            <strong>256-bit cipher suites only</strong> - AES-256-GCM-SHA384 and
+                            ChaCha20-Poly1305-SHA256 (no AES-128 allowed)
+                        </li>
+                        <li>
+                            <strong>X25519 key exchange</strong> - Current standard with path to
+                            post-quantum upgrade
+                        </li>
+                        <li>
+                            <strong>TLS 1.3 only</strong> - Latest protocol with strongest security
+                            properties
+                        </li>
+                    </ul>
+
+                    <p style="margin-top: 15px">
+                        <strong>What is AWS-LC-RS?</strong>
+                    </p>
+                    <p>
+                        AWS-LC-RS is a Rust cryptographic library maintained by Amazon Web Services.
+                        It's built on AWS-LC (AWS's fork of BoringSSL) and includes:
+                    </p>
+                    <ul>
+                        <li>FIPS-validated cryptographic implementations</li>
+                        <li>Post-quantum algorithm research and implementations</li>
+                        <li>Preparation for NIST post-quantum standards (ML-KEM, ML-DSA)</li>
+                        <li>Battle-tested code used in AWS production infrastructure</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>Future-Proof Design:</strong> When NIST finalizes post-quantum
+                        cryptographic standards like ML-KEM (Kyber) for key exchange and ML-DSA
+                        (Dilithium) for signatures, DoggyGallery can adopt them by simply updating
+                        the AWS-LC-RS library. The architecture is already in place.
+                    </div>
+
+                    <div class="highlight-box" style="margin-top: 15px">
+                        <strong>Why This Matters:</strong> Quantum computers pose a future threat
+                        to current cryptography. By using AWS-LC-RS now with strong 256-bit ciphers,
+                        DoggyGallery is positioned to seamlessly adopt post-quantum key exchange
+                        algorithms as they become standardized, protecting against "harvest now,
+                        decrypt later" attacks.
+                    </div>
+                </div>
+
+                <div class="faq-question">
                     🌐 What about HTTP/2 and HTTP/3?
                 </div>
                 <div class="faq-answer">
