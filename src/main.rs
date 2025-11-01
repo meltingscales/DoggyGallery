@@ -7,7 +7,7 @@ use clap::Parser;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tower::ServiceBuilder;
-use tower_http::{compression::CompressionLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use rate_limiter::AuthRateLimiter;
@@ -18,6 +18,7 @@ mod api;
 mod auth;
 mod config;
 mod constants;
+mod embedded;
 mod handlers;
 mod models;
 mod rate_limiter;
@@ -120,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/filter", get(handlers::filter_handler))
         .route("/api/config", get(api::config_handler))
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .nest_service("/static", ServeDir::new("static"))
+        .route("/static/*path", get(embedded::serve_static))
         .layer(
             ServiceBuilder::new()
                 .layer(middleware::from_fn(security_headers::add_security_headers))
