@@ -6,6 +6,8 @@
     let currentIndex = 0;
     let touchStartX = 0;
     let touchEndX = 0;
+    let randomTimerInterval = null;
+    let randomTimerSeconds = 5;
 
     /**
      * Initialize the lightbox with media items
@@ -87,6 +89,14 @@
     function closeLightbox() {
         const lightbox = document.getElementById('lightbox');
         const content = document.getElementById('lightbox-content');
+
+        // Stop random timer if active
+        stopRandomTimer();
+        const toggleCheckbox = document.getElementById('randomTimerToggle');
+        if (toggleCheckbox) {
+            toggleCheckbox.checked = false;
+        }
+
         if (lightbox) {
             lightbox.classList.remove('active');
         }
@@ -124,6 +134,54 @@
     }
 
     /**
+     * Start the random timer
+     */
+    function startRandomTimer() {
+        stopRandomTimer(); // Clear any existing timer
+        if (mediaItems.length <= 1) return;
+
+        randomTimerInterval = setInterval(() => {
+            randomMedia();
+        }, randomTimerSeconds * 1000);
+    }
+
+    /**
+     * Stop the random timer
+     */
+    function stopRandomTimer() {
+        if (randomTimerInterval) {
+            clearInterval(randomTimerInterval);
+            randomTimerInterval = null;
+        }
+    }
+
+    /**
+     * Toggle the random timer on/off
+     * @param {boolean} enabled - Whether to enable the timer
+     */
+    function toggleRandomTimer(enabled) {
+        if (enabled) {
+            startRandomTimer();
+        } else {
+            stopRandomTimer();
+        }
+    }
+
+    /**
+     * Update the random timer interval
+     * @param {number} seconds - New interval in seconds
+     */
+    function updateRandomTimerInterval(seconds) {
+        randomTimerSeconds = Math.max(1, Math.min(999, parseInt(seconds) || 5));
+
+        // If timer is currently running, restart it with new interval
+        const toggleCheckbox = document.getElementById('randomTimerToggle');
+        if (toggleCheckbox && toggleCheckbox.checked) {
+            startRandomTimer();
+        }
+    }
+
+    /**
      * Handle keyboard navigation
      * @param {KeyboardEvent} e - Keyboard event
      */
@@ -140,6 +198,9 @@
         } else if (e.key === 'Escape') {
             e.preventDefault();
             closeLightbox();
+        } else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            randomMedia();
         }
     }
 
@@ -399,7 +460,9 @@
             close: closeLightbox,
             next: nextMedia,
             prev: prevMedia,
-            random: randomMedia
+            random: randomMedia,
+            toggleRandomTimer: toggleRandomTimer,
+            updateRandomTimerInterval: updateRandomTimerInterval
         };
     }
 })();

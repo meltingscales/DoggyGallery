@@ -71,8 +71,15 @@
     left: 50%;
     transform: translateX(-50%);
     display: flex;
+    flex-direction: column;
     gap: 15px;
+    align-items: center;
     z-index: 1001;
+}
+
+.lightbox-nav > *:first-child {
+    display: flex;
+    gap: 15px;
 }
 
 .lightbox-nav button {
@@ -94,6 +101,58 @@
 
 .lightbox-nav button:active {
     transform: scale(0.95);
+}
+
+.random-timer-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(102, 126, 234, 0.85);
+    padding: 10px 16px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.random-timer-controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.random-timer-controls input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: white;
+}
+
+.random-timer-controls input[type="number"] {
+    width: 60px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.random-timer-controls input[type="number"]:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Remove arrows from number input */
+.random-timer-controls input[type="number"]::-webkit-inner-spin-button,
+.random-timer-controls input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
 }
 
 .lightbox-arrow {

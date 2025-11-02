@@ -85,9 +85,19 @@
             <button class="lightbox-arrow next" onclick="event.stopPropagation(); DoggyLightbox.next();">&#8250;</button>
             <div class="lightbox-content" id="lightbox-content"></div>
             <div class="lightbox-nav">
-                <button onclick="event.stopPropagation(); DoggyLightbox.prev();">← Prev</button>
-                <button onclick="event.stopPropagation(); DoggyLightbox.random();">🎲 Random</button>
-                <button onclick="event.stopPropagation(); DoggyLightbox.next();">Next →</button>
+                <div>
+                    <button onclick="event.stopPropagation(); DoggyLightbox.prev();">← Prev</button>
+                    <button onclick="event.stopPropagation(); DoggyLightbox.random();">🎲 Random</button>
+                    <button onclick="event.stopPropagation(); DoggyLightbox.next();">Next →</button>
+                </div>
+                <div class="random-timer-controls">
+                    <label>
+                        <input type="checkbox" id="randomTimerToggle" onclick="event.stopPropagation(); DoggyLightbox.toggleRandomTimer(this.checked);">
+                        Auto-Random:
+                    </label>
+                    <input type="number" id="randomTimerInterval" min="1" max="999" value="5" onclick="event.stopPropagation();" onchange="event.stopPropagation(); DoggyLightbox.updateRandomTimerInterval(this.value);">
+                    <span>sec</span>
+                </div>
             </div>
         </div>
 
