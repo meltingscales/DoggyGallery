@@ -55,7 +55,7 @@ use handlers::AppState;
     ),
     info(
         title = "DoggyGallery API",
-        version = "0.5.3",
+        version = env!("CARGO_PKG_VERSION"),
         description = "A secure media gallery server with TLS 1.3 + HTTP/2, lazy loading, pagination, and random media selection",
     )
 )]
