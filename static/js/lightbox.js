@@ -134,15 +134,22 @@
             console.error('Error fetching random media:', error);
 
             // Fallback to local random if API fails
-            if (mediaItems.length <= 1) return;
-
-            let randomIndex;
-            do {
-                randomIndex = Math.floor(Math.random() * mediaItems.length);
-            } while (randomIndex === currentIndex);
-
-            displayMedia(randomIndex);
+            randomLocal();
         }
+    }
+
+    /**
+     * Navigate to random media from current page only
+     */
+    function randomLocal() {
+        if (mediaItems.length <= 1) return;
+
+        let randomIndex;
+        do {
+            randomIndex = Math.floor(Math.random() * mediaItems.length);
+        } while (randomIndex === currentIndex);
+
+        displayMedia(randomIndex);
     }
 
     /**
@@ -473,6 +480,7 @@
             next: nextMedia,
             prev: prevMedia,
             random: randomMedia,
+            randomLocal: randomLocal,
             toggleRandomTimer: toggleRandomTimer,
             updateRandomTimerInterval: updateRandomTimerInterval
         };

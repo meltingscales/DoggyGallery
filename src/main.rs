@@ -53,7 +53,7 @@ use handlers::AppState;
     ),
     info(
         title = "DoggyGallery API",
-        version = "0.5.0",
+        version = "0.5.2",
         description = "A secure media gallery server with TLS 1.3 + HTTP/2, lazy loading, pagination, and random media selection",
     )
 )]

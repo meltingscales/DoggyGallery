@@ -14,6 +14,8 @@
                 <h1>
                     <span>🔍 Filter Gallery</span>
                     <div style="display: flex; gap: 8px;">
+                        <a href="/" class="nav-link">🏠 Gallery</a>
+                        <a href="/static/random.html" class="nav-link">🎲 Random</a>
                         <a href="/static/faq.html" class="nav-link">FAQ</a>
                         <a href="/docs" class="nav-link">📚 API</a>
                     </div>
@@ -88,7 +90,7 @@
             <div class="lightbox-nav">
                 <div>
                     <button onclick="event.stopPropagation(); DoggyLightbox.prev();">← Prev</button>
-                    <button onclick="event.stopPropagation(); DoggyLightbox.random();">🎲 Random</button>
+                    <button onclick="event.stopPropagation(); DoggyLightbox.randomLocal();">🎲 Random on Page</button>
                     <button onclick="event.stopPropagation(); DoggyLightbox.next();">Next →</button>
                 </div>
                 <div class="random-timer-controls">

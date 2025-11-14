@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="light dark" />
+        <title>Random - DoggyGallery</title>
+        <link rel="stylesheet" href="/static/css/main.css" />
+        <link rel="stylesheet" href="/static/css/lightbox.css" />
+        <style>
+            .random-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .random-controls {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+
+            .random-buttons {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .random-display {
+                background: var(--bg-card);
+                border-radius: 12px;
+                padding: 20px;
+                min-height: 400px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .random-display.empty {
+                color: var(--text-secondary);
+                font-size: 18px;
+            }
+
+            .random-display img {
+                max-width: 100%;
+                max-height: 80vh;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            .random-display video {
+                max-width: 100%;
+                max-height: 80vh;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            .random-info {
+                margin-top: 15px;
+                text-align: center;
+                color: var(--text-secondary);
+                font-size: 14px;
+            }
+
+            .filter-panel {
+                background: var(--bg-card);
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+            }
+
+            .filter-row {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 15px;
+            }
+
+            .filter-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .filter-group label {
+                margin-bottom: 5px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+
+            .filter-group select,
+            .filter-group input {
+                padding: 8px 12px;
+                border: 1px solid var(--border-color);
+                border-radius: 6px;
+                background: var(--bg-primary);
+                color: var(--text-primary);
+                font-size: 14px;
+            }
+
+            .random-timer-controls {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: var(--bg-card);
+                padding: 12px 16px;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+            }
+
+            .random-timer-controls label {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+            }
+
+            .random-timer-controls input[type="number"] {
+                width: 60px;
+                padding: 4px 8px;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                background: var(--bg-primary);
+                color: var(--text-primary);
+            }
+
+            .loading-spinner {
+                display: none;
+                font-size: 18px;
+                color: var(--text-secondary);
+            }
+
+            .loading-spinner.active {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="random-container">
+            <header>
+                <h1>
+                    <span>🎲 Random Media</span>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="/static/faq.html" class="nav-link">FAQ</a>
+                        <a href="/docs" class="nav-link">📚 API</a>
+                    </div>
+                </h1>
+                <div style="display: flex; gap: 12px;">
+                    <a href="/" class="back-link">← Gallery</a>
+                    <a href="/static/filter.html" class="back-link">🔍 Filter</a>
+                </div>
+            </header>
+
+            <div class="filter-panel">
+                <form id="filterForm">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="fileType">File Type</label>
+                            <select id="fileType" name="type">
+                                <option value="">All Types</option>
+                                <option value="image">Images</option>
+                                <option value="video">Videos</option>
+                                <option value="audio">Audio</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="extension">Extension</label>
+                            <input
+                                type="text"
+                                id="extension"
+                                name="extension"
+                                placeholder="e.g., .jpg, .mp4"
+                            />
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="fileName">File Name (fuzzy match)</label>
+                            <input
+                                type="text"
+                                id="fileName"
+                                name="name"
+                                placeholder="e.g., vacation, concert"
+                            />
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="random-controls">
+                <div class="random-buttons">
+                    <button class="btn" onclick="loadRandomMedia()">🎲 Random</button>
+                    <button class="btn btn-secondary" onclick="downloadCurrent()">⬇ Download Current</button>
+                </div>
+
+                <div class="random-timer-controls">
+                    <label>
+                        <input type="checkbox" id="randomTimerToggle" onchange="toggleAutoRandom(this.checked)">
+                        Auto-Random:
+                    </label>
+                    <input type="number" id="randomTimerInterval" min="1" max="999" value="5" onchange="updateAutoRandomInterval(this.value)">
+                    <span>sec</span>
+                </div>
+            </div>
+
+            <div class="random-display empty" id="randomDisplay">
+                <div>
+                    <p>Click "Random" to view a random media item</p>
+                    <p style="margin-top: 10px; font-size: 14px;">Use the filters above to narrow down your selection</p>
+                </div>
+            </div>
+
+            <div class="random-info" id="randomInfo"></div>
+
+            <div class="loading-spinner" id="loadingSpinner">Loading random media...</div>
+        </div>
+
+        <script src="/static/js/utils.js"></script>
+        <script src="/static/js/api.js"></script>
+        <script>
+            let currentMedia = null;
+            let autoRandomInterval = null;
+            let autoRandomSeconds = 5;
+
+            async function loadRandomMedia() {
+                const display = document.getElementById('randomDisplay');
+                const info = document.getElementById('randomInfo');
+                const spinner = document.getElementById('loadingSpinner');
+
+                // Get filter values
+                const formData = new FormData(document.getElementById('filterForm'));
+                const filters = {};
+                for (const [key, value] of formData.entries()) {
+                    if (value) {
+                        filters[key] = value;
+                    }
+                }
+
+                // Show loading
+                spinner.classList.add('active');
+
+                try {
+                    // Build query string
+                    const queryParams = new URLSearchParams(filters);
+                    const url = `/api/random${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch random media');
+                    }
+
+                    const data = await response.json();
+                    currentMedia = data;
+
+                    // Clear display
+                    display.innerHTML = '';
+                    display.classList.remove('empty');
+
+                    // Create media element based on type
+                    if (data.file_type === 'image') {
+                        const img = document.createElement('img');
+                        img.src = `/media/${data.path}`;
+                        img.alt = 'Random media';
+                        display.appendChild(img);
+                    } else if (data.file_type === 'video') {
+                        const video = document.createElement('video');
+                        video.controls = true;
+                        video.autoplay = true;
+                        const source = document.createElement('source');
+                        source.src = `/media/${data.path}`;
+                        video.appendChild(source);
+                        display.appendChild(video);
+                    } else if (data.file_type === 'audio') {
+                        // Create enhanced audio player
+                        const audioContainer = document.createElement('div');
+                        audioContainer.style.width = '100%';
+                        audioContainer.style.maxWidth = '600px';
+                        display.appendChild(audioContainer);
+
+                        const audio = document.createElement('audio');
+                        audio.controls = true;
+                        audio.autoplay = true;
+                        audio.src = `/media/${data.path}`;
+                        audio.style.width = '100%';
+                        audioContainer.appendChild(audio);
+                    }
+
+                    // Update info
+                    const fileName = decodeURIComponent(data.path.split('/').pop());
+                    info.textContent = `${fileName} (${data.file_type})`;
+
+                } catch (error) {
+                    console.error('Error loading random media:', error);
+                    display.innerHTML = '<div style="color: var(--text-secondary);">Error loading media. Please try again.</div>';
+                    display.classList.add('empty');
+                    info.textContent = '';
+                } finally {
+                    spinner.classList.remove('active');
+                }
+            }
+
+            function downloadCurrent() {
+                if (!currentMedia) {
+                    alert('No media loaded yet. Click Random first!');
+                    return;
+                }
+
+                const link = document.createElement('a');
+                link.href = `/media/${currentMedia.path}`;
+                link.download = decodeURIComponent(currentMedia.path.split('/').pop());
+                link.click();
+            }
+
+            function clearFilters() {
+                document.getElementById('filterForm').reset();
+            }
+
+            function toggleAutoRandom(enabled) {
+                if (enabled) {
+                    startAutoRandom();
+                } else {
+                    stopAutoRandom();
+                }
+            }
+
+            function startAutoRandom() {
+                stopAutoRandom(); // Clear any existing interval
+                autoRandomInterval = setInterval(() => {
+                    loadRandomMedia();
+                }, autoRandomSeconds * 1000);
+            }
+
+            function stopAutoRandom() {
+                if (autoRandomInterval) {
+                    clearInterval(autoRandomInterval);
+                    autoRandomInterval = null;
+                }
+            }
+
+            function updateAutoRandomInterval(seconds) {
+                autoRandomSeconds = Math.max(1, Math.min(999, parseInt(seconds) || 5));
+
+                // If auto-random is currently running, restart it with new interval
+                const toggleCheckbox = document.getElementById('randomTimerToggle');
+                if (toggleCheckbox && toggleCheckbox.checked) {
+                    startAutoRandom();
+                }
+            }
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    loadRandomMedia();
+                }
+            });
+        </script>
+    </body>
+</html>
