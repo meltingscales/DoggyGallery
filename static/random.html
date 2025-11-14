@@ -8,6 +8,46 @@
         <link rel="stylesheet" href="/static/css/main.css" />
         <link rel="stylesheet" href="/static/css/lightbox.css" />
         <style>
+            .lightbox-random-btn {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: rgba(102, 126, 234, 0.9);
+                color: white;
+                border: none;
+                font-size: 28px;
+                cursor: pointer;
+                z-index: 1002;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .lightbox-random-btn:hover {
+                background: rgba(85, 104, 211, 0.95);
+                transform: scale(1.1);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+            }
+
+            .lightbox-random-btn:active {
+                transform: scale(0.95);
+            }
+
+            @media (max-width: 768px) {
+                .lightbox-random-btn {
+                    width: 70px;
+                    height: 70px;
+                    font-size: 32px;
+                    bottom: 20px;
+                    right: 20px;
+                }
+            }
+
             .random-container {
                 max-width: 1200px;
                 margin: 0 auto;
@@ -202,7 +242,7 @@
                         <input type="checkbox" id="randomTimerToggle" onchange="toggleAutoRandom(this.checked)">
                         Auto-Random:
                     </label>
-                    <input type="number" id="randomTimerInterval" min="1" max="999" value="5" onchange="updateAutoRandomInterval(this.value)">
+                    <input type="number" id="randomTimerInterval" min="1" max="999" value="10" onchange="updateAutoRandomInterval(this.value)">
                     <span>sec</span>
                 </div>
             </div>
@@ -219,12 +259,19 @@
             <div class="loading-spinner" id="loadingSpinner">Loading random media...</div>
         </div>
 
+        <!-- Lightbox for fullscreen viewing -->
+        <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+            <span class="lightbox-close">&times;</span>
+            <div class="lightbox-content" id="lightboxContent" onclick="event.stopPropagation();"></div>
+            <button class="lightbox-random-btn" onclick="event.stopPropagation(); loadRandomMedia();" title="Random">🎲</button>
+        </div>
+
         <script src="/static/js/utils.js"></script>
         <script src="/static/js/api.js"></script>
         <script>
             let currentMedia = null;
             let autoRandomInterval = null;
-            let autoRandomSeconds = 5;
+            let autoRandomSeconds = 10;
 
             async function loadRandomMedia() {
                 const display = document.getElementById('randomDisplay');
@@ -265,11 +312,15 @@
                         const img = document.createElement('img');
                         img.src = `/media/${data.path}`;
                         img.alt = 'Random media';
+                        img.style.cursor = 'pointer';
+                        img.onclick = () => openLightbox();
                         display.appendChild(img);
                     } else if (data.file_type === 'video') {
                         const video = document.createElement('video');
                         video.controls = true;
                         video.autoplay = true;
+                        video.style.cursor = 'pointer';
+                        video.onclick = () => openLightbox();
                         const source = document.createElement('source');
                         source.src = `/media/${data.path}`;
                         video.appendChild(source);
@@ -279,6 +330,8 @@
                         const audioContainer = document.createElement('div');
                         audioContainer.style.width = '100%';
                         audioContainer.style.maxWidth = '600px';
+                        audioContainer.style.cursor = 'pointer';
+                        audioContainer.onclick = () => openLightbox();
                         display.appendChild(audioContainer);
 
                         const audio = document.createElement('audio');
@@ -289,9 +342,15 @@
                         audioContainer.appendChild(audio);
                     }
 
-                    // Update info
-                    const fileName = decodeURIComponent(data.path.split('/').pop());
-                    info.textContent = `${fileName} (${data.file_type})`;
+                    // Update info with full path
+                    const fullPath = decodeURIComponent(data.path);
+                    info.textContent = `${fullPath} (${data.file_type})`;
+
+                    // If lightbox is open, also update it
+                    const lightbox = document.getElementById('lightbox');
+                    if (lightbox && lightbox.classList.contains('active')) {
+                        updateLightboxContent();
+                    }
 
                 } catch (error) {
                     console.error('Error loading random media:', error);
@@ -353,11 +412,64 @@
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
+                const lightbox = document.getElementById('lightbox');
+                const isLightboxOpen = lightbox && lightbox.classList.contains('active');
+
                 if (e.key === 'r' || e.key === 'R') {
                     e.preventDefault();
                     loadRandomMedia();
+                } else if (e.key === 'Escape' && isLightboxOpen) {
+                    e.preventDefault();
+                    closeLightbox();
                 }
             });
+
+            function updateLightboxContent() {
+                if (!currentMedia) return;
+
+                const content = document.getElementById('lightboxContent');
+                content.innerHTML = '';
+
+                // Create fullscreen media element
+                if (currentMedia.file_type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = `/media/${currentMedia.path}`;
+                    img.alt = 'Random media';
+                    content.appendChild(img);
+                } else if (currentMedia.file_type === 'video') {
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    video.autoplay = true;
+                    const source = document.createElement('source');
+                    source.src = `/media/${currentMedia.path}`;
+                    video.appendChild(source);
+                    content.appendChild(video);
+                } else if (currentMedia.file_type === 'audio') {
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.autoplay = true;
+                    audio.src = `/media/${currentMedia.path}`;
+                    audio.style.width = '100%';
+                    audio.style.maxWidth = '600px';
+                    content.appendChild(audio);
+                }
+            }
+
+            function openLightbox() {
+                if (!currentMedia) return;
+
+                const lightbox = document.getElementById('lightbox');
+                updateLightboxContent();
+                lightbox.classList.add('active');
+            }
+
+            function closeLightbox() {
+                const lightbox = document.getElementById('lightbox');
+                const content = document.getElementById('lightboxContent');
+
+                lightbox.classList.remove('active');
+                content.innerHTML = '';
+            }
         </script>
     </body>
 </html>

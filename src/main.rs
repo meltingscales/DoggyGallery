@@ -5,7 +5,9 @@ use axum::{
 };
 use clap::Parser;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -53,7 +55,7 @@ use handlers::AppState;
     ),
     info(
         title = "DoggyGallery API",
-        version = "0.5.2",
+        version = "0.5.3",
         description = "A secure media gallery server with TLS 1.3 + HTTP/2, lazy loading, pagination, and random media selection",
     )
 )]
@@ -88,10 +90,38 @@ async fn main() -> anyhow::Result<()> {
         constants::HTTP_VERSION
     );
 
+    // Initialize media cache
+    let media_dir_canonical = config.media_dir.clone().canonicalize()?;
+    tracing::info!("Building initial media cache...");
+    let initial_cache = handlers::refresh_media_cache(&media_dir_canonical)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to build initial media cache: {:?}", e))?;
+    let media_cache = Arc::new(RwLock::new(initial_cache));
+
     // Create application state
     let app_state = AppState {
-        media_dir: config.media_dir.clone().canonicalize()?,
+        media_dir: media_dir_canonical.clone(),
+        media_cache: media_cache.clone(),
     };
+
+    // Start cache refresh task (refresh every 5 minutes)
+    let cache_refresh_dir = media_dir_canonical.clone();
+    let cache_refresh_cache = media_cache.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(300)); // Refresh every 5 minutes
+        loop {
+            interval.tick().await;
+            match handlers::refresh_media_cache(&cache_refresh_dir).await {
+                Ok(new_cache) => {
+                    let mut cache = cache_refresh_cache.write().await;
+                    *cache = new_cache;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to refresh media cache: {:?}", e);
+                }
+            }
+        }
+    });
 
     // Create rate limiter for failed auth attempts
     // Allow 10 failed attempts within a 60-second window

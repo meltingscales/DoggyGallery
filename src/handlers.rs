@@ -9,7 +9,9 @@ use axum::http::header::CONTENT_SECURITY_POLICY;
 use percent_encoding::percent_decode_str;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs;
+use tokio::sync::RwLock;
 use image::imageops::FilterType;
 use rand::seq::SliceRandom;
 
@@ -18,9 +20,50 @@ use crate::constants;
 use crate::models::{DirectoryEntry, DirectoryListing, EntryType};
 use crate::templates::{GalleryTemplate, MusicPlayerTemplate};
 
+/// Cached media files for fast random selection
+#[derive(Clone, Debug)]
+pub struct MediaCache {
+    pub items: Vec<FilterResult>,
+    pub last_updated: std::time::Instant,
+}
+
+impl MediaCache {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+            last_updated: std::time::Instant::now(),
+        }
+    }
+}
+
+/// Refresh the media cache by scanning all media files
+pub async fn refresh_media_cache(media_dir: &PathBuf) -> Result<MediaCache, AppError> {
+    let mut items = Vec::new();
+
+    // Use empty query to get all media files
+    let query = FilterQuery {
+        file_type: None,
+        extension: None,
+        name: None,
+        page: None,
+        per_page: None,
+    };
+
+    // Recursively search all files
+    search_directory(media_dir, "", &query, &mut items).await?;
+
+    tracing::info!("Media cache refreshed: {} items indexed", items.len());
+
+    Ok(MediaCache {
+        items,
+        last_updated: std::time::Instant::now(),
+    })
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub media_dir: PathBuf,
+    pub media_cache: Arc<RwLock<MediaCache>>,
 }
 
 /// Handler for the root path - shows the media directory
@@ -1080,14 +1123,42 @@ pub async fn random_media_handler(
     State(state): State<AppState>,
     Query(query): Query<FilterQuery>,
 ) -> Result<Json<RandomMediaResponse>, AppError> {
-    let mut all_media = Vec::new();
+    // Read from cache
+    let cache = state.media_cache.read().await;
+    let all_media = &cache.items;
 
-    // Recursively search all files
-    search_directory(&state.media_dir, "", &query, &mut all_media).await?;
+    // Filter cached items based on query
+    let filtered_media: Vec<&FilterResult> = all_media
+        .iter()
+        .filter(|item| {
+            // Filter by type
+            if let Some(ref file_type) = query.file_type {
+                if &item.file_type != file_type {
+                    return false;
+                }
+            }
+
+            // Filter by extension
+            if let Some(ref extension) = query.extension {
+                if !item.name.to_lowercase().ends_with(&extension.to_lowercase()) {
+                    return false;
+                }
+            }
+
+            // Filter by name (fuzzy match)
+            if let Some(ref name) = query.name {
+                if !item.name.to_lowercase().contains(&name.to_lowercase()) {
+                    return false;
+                }
+            }
+
+            true
+        })
+        .collect();
 
     // Pick a random item
     let mut rng = rand::thread_rng();
-    let random_item = all_media.choose(&mut rng).ok_or(AppError::NotFound)?;
+    let random_item = filtered_media.choose(&mut rng).ok_or(AppError::NotFound)?;
 
     Ok(Json(RandomMediaResponse {
         path: random_item.path.clone(),
