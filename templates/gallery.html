@@ -31,11 +31,23 @@
             {% endif %}
         </header>
 
-        {% if listing.entries.is_empty() %}
+        {% if listing.total_items == 0 %}
             <div class="empty">
                 <p>No media files or directories found in this location.</p>
             </div>
         {% else %}
+            <div class="pagination-info" id="pagination-info"
+                 data-page="{{ listing.page }}"
+                 data-per-page="{{ listing.per_page }}"
+                 data-entries="{{ listing.entries.len() }}"
+                 data-total="{{ listing.total_items }}">
+                Loading...
+            </div>
+            <div id="pagination-container"
+                 data-page="{{ listing.page }}"
+                 data-total-pages="{{ listing.total_pages }}"
+                 data-per-page="{{ listing.per_page }}">
+            </div>
             <div class="gallery">
                 {% for entry in listing.entries %}
                     {% if entry.is_directory() %}
@@ -50,7 +62,11 @@
                         </a>
                     {% else if entry.is_image() %}
                         <div class="gallery-item media-item" data-media-path="{{ entry.path }}" data-media-type="image">
-                            <img src="/media/{{ entry.path }}" alt="{{ entry.name }}" class="thumbnail" loading="lazy">
+                            <img src="/thumbnail/{{ entry.path }}"
+                                 data-full-src="/media/{{ entry.path }}"
+                                 alt="{{ entry.name }}"
+                                 class="thumbnail progressive-image"
+                                 loading="lazy">
                             <div class="item-info">
                                 <div class="item-name">{{ entry.name }}</div>
                                 <div class="item-size">{{ entry.formatted_size() }}</div>
@@ -107,8 +123,29 @@
         </div>
     </div>
 
+    <script src="/static/js/utils.js"></script>
     <script src="/static/js/lightbox.js"></script>
     <script>
+        // Progressive image loading
+        document.addEventListener('DOMContentLoaded', function() {
+            const progressiveImages = document.querySelectorAll('.progressive-image');
+
+            progressiveImages.forEach(img => {
+                const fullSrc = img.getAttribute('data-full-src');
+                if (!fullSrc) return;
+
+                // Create a new image to preload the full resolution
+                const fullImg = new Image();
+                fullImg.src = fullSrc;
+
+                fullImg.onload = function() {
+                    // Replace the thumbnail with the full image
+                    img.src = fullSrc;
+                    img.classList.add('loaded');
+                };
+            });
+        });
+
         // Build array of all media items (images, videos, and audio)
         document.addEventListener('DOMContentLoaded', function() {
             const mediaItems = [];

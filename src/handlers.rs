@@ -10,6 +10,8 @@ use percent_encoding::percent_decode_str;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
+use image::imageops::FilterType;
+use rand::seq::SliceRandom;
 
 use crate::archives;
 use crate::constants;
@@ -22,8 +24,11 @@ pub struct AppState {
 }
 
 /// Handler for the root path - shows the media directory
-pub async fn index_handler(State(state): State<AppState>) -> Result<Html<String>, AppError> {
-    list_directory_handler(State(state), Path("".to_string())).await
+pub async fn index_handler(
+    State(state): State<AppState>,
+    Query(pagination): Query<PaginationQuery>,
+) -> Result<Html<String>, AppError> {
+    list_directory_handler(State(state), Path("".to_string()), Query(pagination)).await
 }
 
 /// Handler for /browse redirect - redirects to home page
@@ -32,8 +37,11 @@ pub async fn browse_redirect_handler() -> Redirect {
 }
 
 /// Handler for /music root - shows music in the media directory
-pub async fn music_index_handler(State(state): State<AppState>) -> Result<Html<String>, AppError> {
-    music_list_handler(State(state), Path("".to_string())).await
+pub async fn music_index_handler(
+    State(state): State<AppState>,
+    Query(pagination): Query<PaginationQuery>,
+) -> Result<Html<String>, AppError> {
+    music_list_handler(State(state), Path("".to_string()), Query(pagination)).await
 }
 
 /// Handler for /music/ redirect - redirects to /music
@@ -45,6 +53,7 @@ pub async fn music_redirect_handler() -> Redirect {
 pub async fn music_list_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
+    Query(pagination): Query<PaginationQuery>,
 ) -> Result<Html<String>, AppError> {
     // Decode the URL-encoded path
     let decoded_path = percent_decode_str(&path)
@@ -132,6 +141,22 @@ pub async fn music_list_handler(
         }
     });
 
+    // Pagination
+    let total_items = entries.len();
+    let per_page = pagination.per_page.unwrap_or(100).max(1).min(500);
+    let total_pages = if total_items == 0 { 1 } else { (total_items + per_page - 1) / per_page };
+    let page = pagination.page.unwrap_or(1).max(1).min(total_pages);
+
+    // Calculate pagination slice
+    let start = (page - 1) * per_page;
+    let end = (start + per_page).min(total_items);
+
+    let paginated_entries = if start < total_items {
+        entries[start..end].to_vec()
+    } else {
+        Vec::new()
+    };
+
     let listing = DirectoryListing {
         current_path: path.clone(),
         parent_path: if path.is_empty() {
@@ -144,7 +169,11 @@ pub async fn music_list_handler(
                     .unwrap_or_default(),
             )
         },
-        entries,
+        entries: paginated_entries,
+        page,
+        per_page,
+        total_items,
+        total_pages,
     };
 
     let template = MusicPlayerTemplate {
@@ -157,6 +186,7 @@ pub async fn music_list_handler(
 pub async fn music_archive_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
+    Query(pagination): Query<PaginationQuery>,
 ) -> Result<Html<String>, AppError> {
     // Decode the URL-encoded path
     let decoded_path = percent_decode_str(&path)
@@ -200,6 +230,22 @@ pub async fn music_archive_handler(
         entry.path = format!("{}!/{}", path, entry.path);
     }
 
+    // Pagination
+    let total_items = entries.len();
+    let per_page = pagination.per_page.unwrap_or(100).max(1).min(500);
+    let total_pages = if total_items == 0 { 1 } else { (total_items + per_page - 1) / per_page };
+    let page = pagination.page.unwrap_or(1).max(1).min(total_pages);
+
+    // Calculate pagination slice
+    let start = (page - 1) * per_page;
+    let end = (start + per_page).min(total_items);
+
+    let paginated_entries = if start < total_items {
+        entries[start..end].to_vec()
+    } else {
+        Vec::new()
+    };
+
     let listing = DirectoryListing {
         current_path: format!("{} (archive)", decoded_path),
         parent_path: Some(
@@ -208,7 +254,11 @@ pub async fn music_archive_handler(
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default(),
         ),
-        entries,
+        entries: paginated_entries,
+        page,
+        per_page,
+        total_items,
+        total_pages,
     };
 
     let template = MusicPlayerTemplate {
@@ -477,6 +527,7 @@ async fn serve_album_art_from_archive(
 pub async fn list_directory_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
+    Query(pagination): Query<PaginationQuery>,
 ) -> Result<Html<String>, AppError> {
     // Decode the URL-encoded path
     let decoded_path = percent_decode_str(&path)
@@ -557,6 +608,22 @@ pub async fn list_directory_handler(
         }
     });
 
+    // Pagination
+    let total_items = entries.len();
+    let per_page = pagination.per_page.unwrap_or(100).max(1).min(500);
+    let total_pages = if total_items == 0 { 1 } else { (total_items + per_page - 1) / per_page };
+    let page = pagination.page.unwrap_or(1).max(1).min(total_pages);
+
+    // Calculate pagination slice
+    let start = (page - 1) * per_page;
+    let end = (start + per_page).min(total_items);
+
+    let paginated_entries = if start < total_items {
+        entries[start..end].to_vec()
+    } else {
+        Vec::new()
+    };
+
     let listing = DirectoryListing {
         current_path: path.clone(),
         parent_path: if path.is_empty() {
@@ -569,7 +636,11 @@ pub async fn list_directory_handler(
                     .unwrap_or_default(),
             )
         },
-        entries,
+        entries: paginated_entries,
+        page,
+        per_page,
+        total_items,
+        total_pages,
     };
 
     let template = GalleryTemplate {
@@ -730,6 +801,91 @@ pub async fn serve_media_handler(
     Ok(response_builder.body(Body::from(contents)).unwrap())
 }
 
+/// Handler for serving thumbnail versions of images
+pub async fn serve_thumbnail_handler(
+    State(state): State<AppState>,
+    Path(path): Path<String>,
+) -> Result<Response, AppError> {
+    // Decode the URL-encoded path
+    let decoded_path = percent_decode_str(&path)
+        .decode_utf8()
+        .map_err(|_| AppError::InvalidPath)?;
+
+    // Construct the full path
+    let full_path = state.media_dir.join(decoded_path.as_ref());
+
+    // Canonicalize to prevent path traversal attacks
+    let canonical_path = full_path
+        .canonicalize()
+        .map_err(|_| AppError::NotFound)?;
+
+    // Ensure the path is within the media directory
+    if !canonical_path.starts_with(&state.media_dir) {
+        return Err(AppError::Forbidden);
+    }
+
+    // Check if it's a file
+    if !canonical_path.is_file() {
+        return Err(AppError::NotFound);
+    }
+
+    // Only serve image files
+    let file_name = canonical_path.file_name()
+        .and_then(|n| n.to_str())
+        .ok_or(AppError::InvalidPath)?;
+
+    if !is_image(file_name) {
+        return Err(AppError::Forbidden);
+    }
+
+    // Read the file
+    let contents = fs::read(&canonical_path)
+        .await
+        .map_err(|_| AppError::InternalError)?;
+
+    // Validate MIME type from file contents
+    let detected_type = infer::get(&contents);
+    if let Some(file_type) = detected_type {
+        let mime = file_type.mime_type();
+        if !mime.starts_with("image/") {
+            return Err(AppError::Forbidden);
+        }
+    } else {
+        return Err(AppError::Forbidden);
+    }
+
+    // Generate thumbnail
+    let thumbnail = tokio::task::spawn_blocking(move || {
+        generate_thumbnail(&contents, 50, 50)
+    })
+    .await
+    .map_err(|_| AppError::InternalError)?
+    .map_err(|_| AppError::InternalError)?;
+
+    // Return thumbnail with appropriate headers
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "image/jpeg")
+        .header(header::CONTENT_LENGTH, thumbnail.len())
+        .header(header::CACHE_CONTROL, "public, max-age=86400") // Cache for 24 hours
+        .body(Body::from(thumbnail))
+        .unwrap();
+
+    Ok(response)
+}
+
+/// Generate a thumbnail from image bytes
+fn generate_thumbnail(image_data: &[u8], width: u32, height: u32) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    let img = image::load_from_memory(image_data)?;
+    let thumbnail = img.resize(width, height, FilterType::Nearest);
+
+    let mut output = Vec::new();
+    let mut cursor = std::io::Cursor::new(&mut output);
+    thumbnail.write_to(&mut cursor, image::ImageFormat::Jpeg)?;
+
+    Ok(output)
+}
+
 fn is_image(filename: &str) -> bool {
     let lower = filename.to_lowercase();
     constants::IMAGE_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
@@ -810,6 +966,19 @@ pub struct FilterQuery {
     extension: Option<String>,
     /// Fuzzy match on file name
     name: Option<String>,
+    /// Page number (1-indexed)
+    page: Option<usize>,
+    /// Number of items per page
+    per_page: Option<usize>,
+}
+
+/// Pagination query parameters
+#[derive(Debug, Deserialize)]
+pub struct PaginationQuery {
+    /// Page number (1-indexed)
+    pub page: Option<usize>,
+    /// Number of items per page
+    pub per_page: Option<usize>,
 }
 
 /// Filter response
@@ -819,10 +988,16 @@ pub struct FilterResponse {
     results: Vec<FilterResult>,
     /// Total number of results
     total: usize,
+    /// Current page number
+    page: usize,
+    /// Number of items per page
+    per_page: usize,
+    /// Total number of pages
+    total_pages: usize,
 }
 
 /// Individual filter result
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct FilterResult {
     /// Relative path to the file
     path: String,
@@ -858,7 +1033,66 @@ pub async fn filter_handler(
 
     let total = results.len();
 
-    Ok(Json(FilterResponse { results, total }))
+    // Pagination
+    let per_page = query.per_page.unwrap_or(50).max(1).min(500);
+    let page = query.page.unwrap_or(1).max(1);
+    let total_pages = (total + per_page - 1) / per_page;
+
+    // Calculate pagination slice
+    let start = (page - 1) * per_page;
+    let end = (start + per_page).min(total);
+
+    let paginated_results = if start < total {
+        results[start..end].to_vec()
+    } else {
+        Vec::new()
+    };
+
+    Ok(Json(FilterResponse {
+        results: paginated_results,
+        total,
+        page,
+        per_page,
+        total_pages,
+    }))
+}
+
+/// Random media response
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct RandomMediaResponse {
+    /// Relative path to the random media file
+    path: String,
+    /// File type (image, video, or audio)
+    file_type: String,
+}
+
+/// Handler for getting a random media item from the entire collection
+#[utoipa::path(
+    get,
+    path = "/api/random",
+    params(FilterQuery),
+    responses(
+        (status = 200, description = "Random media item", body = RandomMediaResponse)
+    ),
+    tag = "media"
+)]
+pub async fn random_media_handler(
+    State(state): State<AppState>,
+    Query(query): Query<FilterQuery>,
+) -> Result<Json<RandomMediaResponse>, AppError> {
+    let mut all_media = Vec::new();
+
+    // Recursively search all files
+    search_directory(&state.media_dir, "", &query, &mut all_media).await?;
+
+    // Pick a random item
+    let mut rng = rand::thread_rng();
+    let random_item = all_media.choose(&mut rng).ok_or(AppError::NotFound)?;
+
+    Ok(Json(RandomMediaResponse {
+        path: random_item.path.clone(),
+        file_type: random_item.file_type.clone(),
+    }))
 }
 
 /// Recursively search directory for matching files

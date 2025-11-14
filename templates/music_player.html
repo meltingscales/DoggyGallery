@@ -31,11 +31,23 @@
             {% endif %}
         </header>
 
-        {% if listing.entries.is_empty() %}
+        {% if listing.total_items == 0 %}
             <div class="empty">
                 <p>No audio files or directories found in this location.</p>
             </div>
         {% else %}
+            <div class="pagination-info" id="pagination-info"
+                 data-page="{{ listing.page }}"
+                 data-per-page="{{ listing.per_page }}"
+                 data-entries="{{ listing.entries.len() }}"
+                 data-total="{{ listing.total_items }}">
+                Loading...
+            </div>
+            <div id="pagination-container"
+                 data-page="{{ listing.page }}"
+                 data-total-pages="{{ listing.total_pages }}"
+                 data-per-page="{{ listing.per_page }}">
+            </div>
             <!-- Show statistics -->
             {% set audio_count = 0 %}
             {% set dir_count = 0 %}
@@ -122,6 +134,7 @@
         </div>
     </div>
 
+    <script src="/static/js/utils.js"></script>
     <script src="/static/js/lightbox.js"></script>
     <script src="/static/js/music-player.js"></script>
     <script>

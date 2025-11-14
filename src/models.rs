@@ -5,6 +5,10 @@ pub struct DirectoryListing {
     pub current_path: String,
     pub parent_path: Option<String>,
     pub entries: Vec<DirectoryEntry>,
+    pub page: usize,
+    pub per_page: usize,
+    pub total_items: usize,
+    pub total_pages: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

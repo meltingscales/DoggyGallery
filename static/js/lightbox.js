@@ -121,16 +121,28 @@
 
     /**
      * Navigate to random media
+     * Uses API to get truly random item across all pages
      */
-    function randomMedia() {
-        if (mediaItems.length <= 1) return;
+    async function randomMedia() {
+        try {
+            const response = await fetch('/api/random');
+            const data = await response.json();
 
-        let randomIndex;
-        do {
-            randomIndex = Math.floor(Math.random() * mediaItems.length);
-        } while (randomIndex === currentIndex);
+            // Open the random media item
+            open(`/media/${data.path}`, data.file_type);
+        } catch (error) {
+            console.error('Error fetching random media:', error);
 
-        displayMedia(randomIndex);
+            // Fallback to local random if API fails
+            if (mediaItems.length <= 1) return;
+
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * mediaItems.length);
+            } while (randomIndex === currentIndex);
+
+            displayMedia(randomIndex);
+        }
     }
 
     /**

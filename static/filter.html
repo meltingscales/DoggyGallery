@@ -67,6 +67,7 @@
                     <div class="results-count" id="resultsCount">0 results</div>
                 </div>
                 <div class="results-grid" id="resultsGrid"></div>
+                <div id="paginationContainer"></div>
             </div>
 
             <div id="emptyState" class="empty-state">
@@ -111,6 +112,11 @@
             const resultsCount = document.getElementById('resultsCount');
             const emptyState = document.getElementById('emptyState');
             const loading = document.getElementById('loading');
+            const paginationContainer = document.getElementById('paginationContainer');
+
+            let currentFilters = {};
+            let currentPage = 1;
+            const perPage = 50;
 
             // Use utility functions from modules
             const { formatBytes, getFileIcon } = window.DoggyUtils;
@@ -129,42 +135,58 @@
                     }
                 }
 
+                currentFilters = filters;
+                currentPage = 1;
+                await performSearch();
+            });
+
+            async function performSearch(page = 1) {
+                currentPage = page;
+
                 // Show loading
                 loading.style.display = 'block';
                 resultsSection.style.display = 'none';
                 emptyState.style.display = 'none';
 
                 try {
+                    const filters = {
+                        ...currentFilters,
+                        page: currentPage,
+                        per_page: perPage
+                    };
                     const data = await searchMedia(filters);
 
                     // Hide loading
                     loading.style.display = 'none';
 
                     // Display results
-                    displayResults(data.results, data.total);
+                    displayResults(data);
                 } catch (error) {
                     console.error('Error fetching results:', error);
                     loading.style.display = 'none';
                     alert('Error searching files. Please try again.');
                 }
-            });
+            }
 
-            function displayResults(results, total) {
+            function displayResults(data) {
                 resultsGrid.innerHTML = '';
+                paginationContainer.innerHTML = '';
 
-                if (results.length === 0) {
+                if (data.results.length === 0) {
                     emptyState.innerHTML = '<p>No files match your filters.</p><p style="margin-top: 8px; font-size: 14px;">Try adjusting your search criteria.</p>';
                     emptyState.style.display = 'block';
                     resultsSection.style.display = 'none';
                     return;
                 }
 
-                resultsCount.textContent = `${total} result${total !== 1 ? 's' : ''}`;
+                const start = (data.page - 1) * data.per_page + 1;
+                const end = Math.min(start + data.results.length - 1, data.total);
+                resultsCount.textContent = `Showing ${start}-${end} of ${data.total} result${data.total !== 1 ? 's' : ''}`;
                 resultsSection.style.display = 'block';
                 emptyState.style.display = 'none';
 
                 // Build array of media items for lightbox
-                const mediaItems = results.map(result => ({
+                const mediaItems = data.results.map(result => ({
                     src: `/media/${result.path}`,
                     type: result.file_type
                 }));
@@ -172,7 +194,7 @@
                 // Initialize lightbox with media items
                 DoggyLightbox.init(mediaItems);
 
-                results.forEach((result, index) => {
+                data.results.forEach((result, index) => {
                     const item = document.createElement('div');
                     item.className = 'result-item';
                     item.onclick = () => DoggyLightbox.open(`/media/${result.path}`, result.file_type);
@@ -210,6 +232,26 @@
 
                     resultsGrid.appendChild(item);
                 });
+
+                // Render pagination
+                if (data.total_pages > 1) {
+                    const pagination = window.DoggyUtils.renderPagination(data.page, data.total_pages, perPage);
+
+                    // Override links to call performSearch instead of page reload
+                    pagination.querySelectorAll('a.pagination-btn').forEach(link => {
+                        const href = link.getAttribute('href');
+                        const match = href.match(/page=(\d+)/);
+                        if (match) {
+                            const pageNum = parseInt(match[1]);
+                            link.onclick = (e) => {
+                                e.preventDefault();
+                                performSearch(pageNum);
+                            };
+                        }
+                    });
+
+                    paginationContainer.appendChild(pagination);
+                }
             }
 
             function clearFilters() {

@@ -36,12 +36,14 @@ use handlers::AppState;
 #[openapi(
     paths(
         handlers::filter_handler,
+        handlers::random_media_handler,
         api::config_handler,
     ),
     components(
         schemas(
             handlers::FilterResponse,
             handlers::FilterResult,
+            handlers::RandomMediaResponse,
             api::ConfigInfo,
         )
     ),
@@ -51,8 +53,8 @@ use handlers::AppState;
     ),
     info(
         title = "DoggyGallery API",
-        version = "0.1.0",
-        description = "A secure media gallery server with TLS 1.3 + HTTP/2",
+        version = "0.5.0",
+        description = "A secure media gallery server with TLS 1.3 + HTTP/2, lazy loading, pagination, and random media selection",
     )
 )]
 struct ApiDoc;
@@ -123,9 +125,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/music/*path", get(handlers::music_list_handler))
         .route("/music-archive/*path", get(handlers::music_archive_handler))
         .route("/media/*path", get(handlers::serve_media_handler))
+        .route("/thumbnail/*path", get(handlers::serve_thumbnail_handler))
         .route("/media-archive/*path", get(handlers::serve_archive_file_handler))
         .route("/album-art/*path", get(handlers::serve_album_art_handler))
         .route("/api/filter", get(handlers::filter_handler))
+        .route("/api/random", get(handlers::random_media_handler))
         .route("/api/config", get(api::config_handler))
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .route("/static/*path", get(embedded::serve_static))
